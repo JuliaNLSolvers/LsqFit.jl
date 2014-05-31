@@ -36,10 +36,10 @@ function levenberg_marquardt(f::Function, g::Function, x0; tolX=1e-8, tolG=1e-12
 	residual = sse(fcur)
 	
 	# Maintain a trace of the system.
-	tr = OptimizationTrace()
+	tr = Optim.OptimizationTrace()
 	if show_trace
 		d = {"lambda" => lambda}
-		os = OptimizationState(iterCt, sse(fcur), NaN, d)
+		os = Optim.OptimizationState(iterCt, sse(fcur), NaN, d)
 		push!(tr, os)
 		println(os)
 	end
@@ -86,7 +86,7 @@ function levenberg_marquardt(f::Function, g::Function, x0; tolX=1e-8, tolG=1e-12
 		if show_trace
 			gradnorm = norm(J'*fcur, Inf)
 			d = {"g(x)" => gradnorm, "dx" => delta_x, "lambda" => lambda}
-			os = OptimizationState(iterCt, sse(fcur), gradnorm, d)
+			os = Optim.OptimizationState(iterCt, sse(fcur), gradnorm, d)
 			push!(tr, os)
 			println(os)
 		end
@@ -106,5 +106,5 @@ function levenberg_marquardt(f::Function, g::Function, x0; tolX=1e-8, tolG=1e-12
 		println("Exceeded maximum number of iterations")
 	end
 
-	MultivariateOptimizationResults("Levenberg-Marquardt", x0, x, sse(fcur), iterCt, !converged, false, 0.0, false, 0.0, converged, tolG, tr, f_calls, g_calls)
+	Optim.MultivariateOptimizationResults("Levenberg-Marquardt", x0, x, sse(fcur), iterCt, !converged, false, 0.0, false, 0.0, converged, tolG, tr, f_calls, g_calls)
 end
