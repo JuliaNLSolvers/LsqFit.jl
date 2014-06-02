@@ -27,5 +27,4 @@ There are top-level methods `curve_fit()` and `estimate_errors()` that are usefu
 # Existing Functions
 
 * Curve Fitting: `curve_fit()` and `estimate_errors()`
-* Levenberg-Marquardt: `levenberg_marquardt()`
 

@@ -4,8 +4,7 @@
 
 using CurveFit
 
-my_tests = [ "levenberg_marquardt.jl",
-             "curve_fit.jl"]
+my_tests = [ "curve_fit.jl"]
 
 println("Running tests:")
 
