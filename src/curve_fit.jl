@@ -53,7 +53,7 @@ function estimate_errors(p, residuals, J, alpha)
 
 	# mean square error is: standard square error / degrees of freedom
 	n, p = size(J)
-	mse = sse(residuals)/(n-p)
+	mse = Optim.sse(residuals)/(n-p)
 
 	# compute the covariance matrix from the QR decomposition
 	Q,R = qr(J)
