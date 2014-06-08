@@ -1,30 +1,69 @@
 CurveFit.jl
 ===========
 
-The CurveFit package is a small library that provides basic curve fitting methods in pure Julia under an MIT license. It was ripped from the [Optim.jl](https://github.com/JuliaOpt/Optim.jl) library, which is where it's life began. 
+The CurveFit package is a small library that provides basic curve fitting methods in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaOpt/Optim.jl), before being separated into this library.  At this time, `CurveFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
 
-# Basic Usage 
+Basic Usage
+-----------
 
 There are top-level methods `curve_fit()` and `estimate_errors()` that are useful for fitting data to non-linear models. See the following example:
 
     using CurveFit
 
     # a two-parameter exponential model
-    model(xpts, p) = p[1]*exp(-xpts.*p[2])
-    
+    # x: array of independent variables
+    # p: array of model parameters
+    model(x, p) = p[1]*exp(-x.*p[2])
+
     # some example data
-    xpts = linspace(0,10,20)
-    data = model(xpts, [1.0 2.0]) + 0.01*randn(length(xpts))
-    
-    beta, r, J = curve_fit(model, xpts, data, [0.5, 0.5])
-	# beta = best fit parameters
-	# r = vector of residuals
-	# J = estimated Jacobian at solution
-    
-    # We can use these values to estimate errors on the fit parameters. To get 95% confidence error bars:
-    errors = estimate_errors(beta, r, J)
-    
-# Existing Functions
+    # xdata: independent variables
+    # ydata: dependent variable
+    xdata = linspace(0,10,20)
+    ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 
-* Curve Fitting: `curve_fit()` and `estimate_errors()`
+    fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
+    # fit is a composite type (FitResult), with some interesting values:
+    #	fit.dof: degrees of freedom
+    #	fit.param: best fit parameters
+    #	fit.resid: residuals = vector of residuals
+    #	fit.jacobian: estimated Jacobian at solution
 
+    # We can estimate errors on the fit parameters,
+    # to get 95% confidence error bars:
+    errors = estimate_errors(fit, 0.95)
+
+
+Existing Functionality
+----------------------
+
+`fit = curve_fit(model, x, y, w, p0; kwargs...)`:
+
+* `model`: function that takes two arguments (x, params)
+* `x`: the independent variable
+* `y`: the dependent variable that constrains `model`
+* `w`: weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
+* `p0`: initial guess of the model parameters
+* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt` of `Optim.jl`
+* `fit`: composite type of results (`FitResult`)
+
+
+This performs a fit using a non-linear iteration to minimize the (weighted) residual between the model and the dependent variable data (`y`). The weight (`w`) can be neglected (as per the example) to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point.
+
+----
+
+`sigma = estimate_errors(fit, alpha=0.95)`:
+
+* `fit`: result of curve_fit (a `FitResult` type)
+* `alpha`: confidence limit to calculate for the errors on parameters
+* `sigma`: typical (symmetric) standard deviation for each parameter
+
+This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration. 
+
+----
+
+`covar = estimate_covar(fit)`:
+
+* `fit`: result of curve_fit (a `FitResult` type)
+* `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point
+
+This returns the parameter covariance matrix evaluted at the best fit point. 
