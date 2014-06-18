@@ -1,5 +1,5 @@
 
-immutable FitResult{T}
+immutable LsqFitResult{T}
     # simple type container for now, but can be expanded later
     dof::Int
     param::Vector{T}
@@ -30,7 +30,7 @@ function lmfit(f::Function, p0; kwargs...)
 	p = results.minimum
     resid = f(p)
     dof = length(resid) - length(p)
-	return FitResult(dof, p, f(p), g(p))
+	return LsqFitResult(dof, p, f(p), g(p))
 end
 
 function curve_fit(model::Function, xpts, ydata, p0; kwargs...)
@@ -60,7 +60,7 @@ function curve_fit(model::Function, xpts, ydata, wt::Matrix, p0; kwargs...)
 	lmfit(f,p0; kwargs...)
 end
 
-function estimate_covar(fit::FitResult)
+function estimate_covar(fit::LsqFitResult)
     # computes covariance matrix of fit parameters
     r = fit.resid
     J = fit.jacobian
@@ -74,9 +74,9 @@ function estimate_covar(fit::FitResult)
 	covar = Rinv*Rinv'*mse
 end
 
-function estimate_errors(fit::FitResult, alpha=0.95)
+function estimate_errors(fit::LsqFitResult, alpha=0.95)
     # computes (1-alpha) error estimates from
-    #   fit   : a FitResult from a curve_fit()
+    #   fit   : a LsqFitResult from a curve_fit()
 	#   alpha : alpha percent confidence interval, (e.g. alpha=0.95 for 95% CI)
     covar = estimate_covar(fit)
 

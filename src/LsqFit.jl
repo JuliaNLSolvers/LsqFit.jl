@@ -1,4 +1,4 @@
-module CurveFit
+module LsqFit
 
     export curve_fit,
            estimate_errors,

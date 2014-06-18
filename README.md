@@ -1,14 +1,14 @@
-CurveFit.jl
+LsqFit.jl
 ===========
 
-The CurveFit package is a small library that provides basic curve fitting methods in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaOpt/Optim.jl), before being separated into this library.  At this time, `CurveFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
+The LsqFit package is a small library that provides basic least-squares fitting in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaOpt/Optim.jl), before being separated into this library.  At this time, `LsqFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
 
 Basic Usage
 -----------
 
 There are top-level methods `curve_fit()` and `estimate_errors()` that are useful for fitting data to non-linear models. See the following example:
 
-    using CurveFit
+    using LsqFit
 
     # a two-parameter exponential model
     # x: array of independent variables
@@ -22,7 +22,7 @@ There are top-level methods `curve_fit()` and `estimate_errors()` that are usefu
     ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 
     fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
-    # fit is a composite type (FitResult), with some interesting values:
+    # fit is a composite type (LsqFitResult), with some interesting values:
     #	fit.dof: degrees of freedom
     #	fit.param: best fit parameters
     #	fit.resid: residuals = vector of residuals
@@ -44,7 +44,7 @@ Existing Functionality
 * `w`: weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt` of `Optim.jl`
-* `fit`: composite type of results (`FitResult`)
+* `fit`: composite type of results (`LsqFitResult`)
 
 
 This performs a fit using a non-linear iteration to minimize the (weighted) residual between the model and the dependent variable data (`y`). The weight (`w`) can be neglected (as per the example) to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point.
@@ -53,7 +53,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 
 `sigma = estimate_errors(fit, alpha=0.95)`:
 
-* `fit`: result of curve_fit (a `FitResult` type)
+* `fit`: result of curve_fit (a `LsqFitResult` type)
 * `alpha`: confidence limit to calculate for the errors on parameters
 * `sigma`: typical (symmetric) standard deviation for each parameter
 
@@ -63,7 +63,7 @@ This returns the error or uncertainty of each parameter fit to the model and alr
 
 `covar = estimate_covar(fit)`:
 
-* `fit`: result of curve_fit (a `FitResult` type)
+* `fit`: result of curve_fit (a `LsqFitResult` type)
 * `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point
 
 This returns the parameter covariance matrix evaluted at the best fit point. 

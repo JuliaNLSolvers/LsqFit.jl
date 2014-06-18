@@ -2,7 +2,7 @@
 # Correctness Tests
 #
 
-using CurveFit
+using LsqFit
 
 my_tests = [ "curve_fit.jl"]
 
