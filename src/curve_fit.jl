@@ -60,6 +60,52 @@ function curve_fit(model::Function, xpts, ydata, wt::Matrix, p0; kwargs...)
 	lmfit(f,p0; kwargs...)
 end
 
+function linfit(x, y, fun::Array)
+    linfit(x, y, ones(x), fun)
+end
+
+function linfit(x, y, err, fun::Array)
+    # linear fit of data (x,y) with weights err to the linear combination
+    # of the functions in fun
+    N = length(fun)
+
+    A = zeros(N, N)
+    b = zeros(N)
+    for i = 1:N
+        for j = 1:N
+            A[i, j] = sum(fun[i](x).*fun[j](x).*err.^2)
+        end
+        b[i] = sum(fun[i](x).*y.*err.^2)
+    end
+
+    p = A\b
+    Ainv = inv(A)
+
+    d = zeros(N, length(x))
+    for i = 1:N
+        for j = 1:N
+            d[i, :] = d[i, ] + Ainv[i, j].*fun[j](x).*err.^2
+        end
+    end
+
+    M = zeros(N, N)
+    for i = 1:N
+        for j = 1:N
+            M[i, j] = sum(1/err.^2.*d[i,:].*d[j,:])
+        end
+    end
+
+    p_err = sqrt(diag(M));
+
+    y_fit = 0
+    for i = 1:N
+        y_fit += p[i]*fun[i](x)
+    end
+    chisq = sum( (y_fit - y).^2 .*(err.^2) )*1/(length(x)-N)
+
+    return p, p_err, chisq
+end
+
 function estimate_covar(fit::LsqFitResult)
     # computes covariance matrix of fit parameters
     r = fit.resid
