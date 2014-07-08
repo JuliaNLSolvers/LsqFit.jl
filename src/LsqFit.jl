@@ -2,7 +2,8 @@ module LsqFit
 
     export curve_fit,
            estimate_errors,
-           estimate_covar
+           estimate_covar,
+           linfit
 
     using Optim
     using Calculus
