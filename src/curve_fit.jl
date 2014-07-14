@@ -11,13 +11,13 @@ function lmfit(f::Function, p0; kwargs...)
 	# this is a convenience function for the curve_fit() methods
 	# which assume f(p) is the cost functionj i.e. the residual of a
 	# model where
-    #   model(xpts, params...) = ydata + error (noise)
+	#   model(xpts, params...) = ydata + error (noise)
 
 	# this minimizes f(p) using a least squares  sum of squared error:
-    #   sse = sum(f(p)^2)
-    # This is currently embedded in Optim.levelberg_marquardt()
-    # which calls Optim.sse()
-    #
+	#   sse = sum(f(p)^2)
+	# This is currently embedded in Optim.levelberg_marquardt()
+	# which calls Optim.sse()
+	#
 	# returns p, f(p), g(p) where
 	#   p    : best fit parameters
 	#   f(p) : function evaluated at best fit p, (weighted) residuals
@@ -40,7 +40,7 @@ function curve_fit(model::Function, xpts, ydata, p0; kwargs...)
 end
 
 function curve_fit(model::Function, xpts, ydata, wt::Vector, p0; kwargs...)
-    # construct a weighted cost function, with a vector weight for each ydata
+	# construct a weighted cost function, with a vector weight for each ydata
 	# for example, this might be wt = 1/sigma where sigma is some error term
 	f(p) = wt .* ( model(xpts, p) - ydata )
 	lmfit(f,p0; kwargs...)
