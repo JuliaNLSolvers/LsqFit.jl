@@ -13,10 +13,10 @@ function lmfit(f::Function, p0; kwargs...)
 	# model where
 	#   model(xpts, params...) = ydata + error (noise)
 
-	# this minimizes f(p) using a least squares  sum of squared error:
+	# this minimizes f(p) using a least squares sum of squared error:
 	#   sse = sum(f(p)^2)
 	# This is currently embedded in Optim.levelberg_marquardt()
-	# which calls Optim.sse()
+	# which calls sumabs2
 	#
 	# returns p, f(p), g(p) where
 	#   p    : best fit parameters
@@ -66,7 +66,7 @@ function estimate_covar(fit::LsqFitResult)
 	J = fit.jacobian
 
 	# mean square error is: standard sum square error / degrees of freedom
-	mse = Optim.sse(r) / fit.dof
+	mse = sumabs2(r) / fit.dof
 
 	# compute the covariance matrix from the QR decomposition
 	Q,R = qr(J)
