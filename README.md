@@ -48,7 +48,7 @@ Existing Functionality
 * `y`: the dependent variable that constrains `model`
 * `w`: weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
 * `p0`: initial guess of the model parameters
-* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt` of `Optim.jl`
+* `kwargs`: tuning parameters for fitting, passed to [`levenberg_marquardt`](https://github.com/JuliaOpt/Optim.jl/blob/master/src/levenberg_marquardt.jl) of `Optim.jl`, such as `maxIter` or `show_trace`
 * `fit`: composite type of results (`LsqFitResult`)
 
 
