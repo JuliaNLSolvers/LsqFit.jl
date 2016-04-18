@@ -33,20 +33,30 @@ function lmfit(f::Function, p0; kwargs...)
 	return LsqFitResult(dof, p, f(p), g(p))
 end
 
-function curve_fit(model::Function, xpts, ydata, p0; kwargs...)
+function curve_fit{T<:Any}(model::Function, xpts, ydata, p0; margs::Array{T,1}=[], kwargs...)
 	# construct the cost function
-	f(p) = model(xpts, p) - ydata
+	if length(margs)==0
+		f(p) = model(xpts, p) - ydata
+	else
+		f(p) = model(xpts, p, margs) - ydata
+	end
+
 	lmfit(f,p0; kwargs...)
 end
 
-function curve_fit(model::Function, xpts, ydata, wt::Vector, p0; kwargs...)
+function curve_fit{T<:Any}(model::Function, xpts, ydata, wt::Vector, p0; margs::Array{T,1}=[], kwargs...)
 	# construct a weighted cost function, with a vector weight for each ydata
 	# for example, this might be wt = 1/sigma where sigma is some error term
-	f(p) = wt .* ( model(xpts, p) - ydata )
+	if length(margs)==0
+		f(p) = wt .* ( model(xpts, p) - ydata )
+	else
+		f(p) = wt .* ( model(xpts, p, margs) - ydata )
+	end
+
 	lmfit(f,p0; kwargs...)
 end
 
-function curve_fit(model::Function, xpts, ydata, wt::Matrix, p0; kwargs...)
+function curve_fit{T<:Any}(model::Function, xpts, ydata, wt::Matrix, p0; margs::Array{T,1}=[], kwargs...)
 	# as before, construct a weighted cost function with where this
 	# method uses a matrix weight.
 	# for example: an inverse_covariance matrix
@@ -56,7 +66,11 @@ function curve_fit(model::Function, xpts, ydata, wt::Matrix, p0; kwargs...)
 	# This requires the matrix to be positive definite
 	u = chol(wt)
 
-	f(p) = u * ( model(xpts, p) - ydata )
+	if length(margs)==0
+		f(p) = u * ( model(xpts, p) - ydata )
+	else
+		f(p) = u * ( model(xpts, p) - ydata )
+	end
 	lmfit(f,p0; kwargs...)
 end
 
