@@ -69,7 +69,7 @@ function curve_fit{T<:Any}(model::Function, xpts, ydata, wt::Matrix, p0; margs::
 	if length(margs)==0
 		f(p) = u * ( model(xpts, p) - ydata )
 	else
-		f(p) = u * ( model(xpts, p) - ydata )
+		f(p) = u * ( model(xpts, p, margs) - ydata )
 	end
 	lmfit(f,p0; kwargs...)
 end
