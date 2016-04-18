@@ -41,13 +41,14 @@ There are top-level methods `curve_fit()` and `estimate_errors()` that are usefu
 Existing Functionality
 ----------------------
 
-`fit = curve_fit(model, x, y, w, p0; kwargs...)`:
+`fit = curve_fit(model, x, y, w, p0; margs=[], kwargs...)`:
 
 * `model`: function that takes two arguments (x, params)
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
 * `w`: weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
 * `p0`: initial guess of the model parameters
+* `margs`: constant array of arguments to be passed to the model function when set, model(x, params, margs)
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt` of `Optim.jl`
 * `fit`: composite type of results (`LsqFitResult`)
 
@@ -62,7 +63,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 * `alpha`: confidence limit to calculate for the errors on parameters
 * `sigma`: typical (symmetric) standard deviation for each parameter
 
-This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration. 
+This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration.
 
 ----
 
@@ -71,4 +72,4 @@ This returns the error or uncertainty of each parameter fit to the model and alr
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point
 
-This returns the parameter covariance matrix evaluted at the best fit point. 
+This returns the parameter covariance matrix evaluted at the best fit point.
