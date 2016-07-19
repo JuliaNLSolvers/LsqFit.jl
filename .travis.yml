@@ -1,19 +1,7 @@
-language: cpp
-compiler: 
-    - gcc
+language: julia
+julia: 
+    - 0.3
+    - 0.4
+    - nightly
 notifications:
     email: false
-env:
-  matrix: 
-    - JULIAVERSION="juliareleases" 
-    - JULIAVERSION="julianightlies"
-before_install:
-    - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-    - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-    - sudo apt-get update -qq -y
-    - sudo apt-get install julia -y
-    - git config --global user.name "Travis User"
-    - git config --global user.email "travis@example.net"
-script:
-    - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("LsqFit"))`); Pkg.pin("LsqFit"); Pkg.resolve()'
-    - julia ./test/runtests.jl
