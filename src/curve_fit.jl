@@ -5,6 +5,7 @@ immutable LsqFitResult{T}
 	param::Vector{T}
 	resid::Vector{T}
 	jacobian::Matrix{T}
+	converged::Bool
 end
 
 function lmfit(f::Function, p0; kwargs...)
@@ -30,7 +31,8 @@ function lmfit(f::Function, p0; kwargs...)
 	p = results.minimum
 	resid = f(p)
 	dof = length(resid) - length(p)
-	return LsqFitResult(dof, p, f(p), g(p))
+	converged = results.x_converged | results.gr_converged
+	return LsqFitResult(dof, p, f(p), g(p), converged)
 end
 
 function curve_fit(model::Function, xpts, ydata, p0; kwargs...)
