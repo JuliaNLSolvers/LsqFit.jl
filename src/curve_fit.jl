@@ -30,7 +30,11 @@ function lmfit(f::Function, p0; kwargs...)
 	p = results.minimum
 	resid = f(p)
 	dof = length(resid) - length(p)
-	return LsqFitResult(dof, p, f(p), g(p))
+	if typeof(p) <: AbstractVector
+		return LsqFitResult(dof, p, f(p), g(p))
+	else
+		return LsqFitResult(dof, [p], f(p), g([p]))
+	end
 end
 
 function curve_fit(model::Function, xpts, ydata, p0; kwargs...)
