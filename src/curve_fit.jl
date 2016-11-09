@@ -27,7 +27,7 @@ function lmfit(f::Function, p0; kwargs...)
 	g = Calculus.jacobian(f)
 
 	results = Optim.levenberg_marquardt(f, g, p0; kwargs...)
-	p = results.minimum
+	p = Optim.minimizer(results)
 	resid = f(p)
 	dof = length(resid) - length(p)
 	if typeof(p) <: AbstractVector
