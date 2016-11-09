@@ -7,6 +7,7 @@ The LsqFit package is a small library that provides basic least-squares fitting 
 
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.3.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.3)
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.4.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.4)
+[![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.4.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.5)
 
 Basic Usage
 -----------
@@ -62,7 +63,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 * `alpha`: confidence limit to calculate for the errors on parameters
 * `sigma`: typical (symmetric) standard deviation for each parameter
 
-This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration. 
+This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration.
 
 ----
 
@@ -71,4 +72,4 @@ This returns the error or uncertainty of each parameter fit to the model and alr
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point
 
-This returns the parameter covariance matrix evaluted at the best fit point. 
+This returns the parameter covariance matrix evaluted at the best fit point.
