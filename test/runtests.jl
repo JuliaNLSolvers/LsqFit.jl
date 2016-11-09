@@ -2,9 +2,9 @@
 # Correctness Tests
 #
 
-using LsqFit
+using LsqFit, Optim, Base.Test
 
-my_tests = [ "curve_fit.jl"]
+my_tests = [ "curve_fit.jl", "levenberg_marquardt.jl"]
 
 println("Running tests:")
 

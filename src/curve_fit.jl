@@ -26,7 +26,7 @@ function lmfit(f::Function, p0; kwargs...)
 	# construct Jacobian function, which uses finite difference method
 	g = Calculus.jacobian(f)
 
-	results = Optim.levenberg_marquardt(f, g, p0; kwargs...)
+	results = levenberg_marquardt(f, g, p0; kwargs...)
 	p = Optim.minimizer(results)
 	resid = f(p)
 	dof = length(resid) - length(p)
