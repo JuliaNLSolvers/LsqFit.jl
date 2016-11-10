@@ -8,7 +8,7 @@ let
 
     initial_x = [100.0, 100.0]
 
-    results = Optim.levenberg_marquardt(f_lm, g_lm, initial_x)
+    results = LsqFit.levenberg_marquardt(f_lm, g_lm, initial_x)
     @assert norm(Optim.minimizer(results) - [0.0, 2.0]) < 0.01
 
 
@@ -34,12 +34,12 @@ let
 
     initial_xrb = [-1.2, 1.0]
 
-    results = Optim.levenberg_marquardt(frb, grb, initial_xrb)
+    results = LsqFit.levenberg_marquardt(frb, grb, initial_xrb)
 
     @assert norm(Optim.minimizer(results) - [1.0, 1.0]) < 0.01
 
     # check estimate is within the bound PR #278
-     result = Optim.levenberg_marquardt(frb, grb, [150.0, 150.0]; lower = [10.0, 10.0], upper = [200.0, 200.0])
+     result = LsqFit.levenberg_marquardt(frb, grb, [150.0, 150.0]; lower = [10.0, 10.0], upper = [200.0, 200.0])
      @test Optim.minimizer(result)[1] >= 10.0
      @test Optim.minimizer(result)[2] >= 10.0
 
@@ -57,7 +57,7 @@ let
 
         f_lsq = p -> p[1]*exp(-xdata.*p[2])-ydata
         g_lsq = Calculus.jacobian(f_lsq)
-        results = Optim.levenberg_marquardt(f_lsq, g_lsq, [0.5, 0.5])
+        results = LsqFit.levenberg_marquardt(f_lsq, g_lsq, [0.5, 0.5])
 
         @assert norm(Optim.minimizer(results) - [1.0, 2.0]) < 0.05
     end
@@ -74,24 +74,24 @@ let
         g_lsq = Calculus.jacobian(f_lsq)
 
         # tests for box constraints, PR #196
-        @test_throws ArgumentError Optim.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], lower=[5.0, 11.0])
-        @test_throws ArgumentError Optim.levenberg_marquardt(f_lsq, g_lsq, [5.0, 5.0, 5.0], upper=[15.0, 9.0])
-        @test_throws ArgumentError Optim.levenberg_marquardt(f_lsq, g_lsq, [15.0, 10.0, 15.0], lower=[5.0, 11.0, 5.0])
-        @test_throws ArgumentError Optim.levenberg_marquardt(f_lsq, g_lsq, [5.0, 10.0, 5.0], upper=[15.0, 9.0, 15.0])
+        @test_throws ArgumentError LsqFit.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], lower=[5.0, 11.0])
+        @test_throws ArgumentError LsqFit.levenberg_marquardt(f_lsq, g_lsq, [5.0, 5.0, 5.0], upper=[15.0, 9.0])
+        @test_throws ArgumentError LsqFit.levenberg_marquardt(f_lsq, g_lsq, [15.0, 10.0, 15.0], lower=[5.0, 11.0, 5.0])
+        @test_throws ArgumentError LsqFit.levenberg_marquardt(f_lsq, g_lsq, [5.0, 10.0, 5.0], upper=[15.0, 9.0, 15.0])
 
         lower=[5.0, 11.0, 5.0]
-        results = Optim.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], lower=lower)
+        results = LsqFit.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], lower=lower)
         Optim.minimizer(results)
         @test Optim.converged(results)
         @test all(Optim.minimizer(results) .>= lower)
 
         upper=[15.0, 9.0, 15.0]
-        results = Optim.levenberg_marquardt(f_lsq, g_lsq, [5.0, 5.0, 5.0], upper=upper)
+        results = LsqFit.levenberg_marquardt(f_lsq, g_lsq, [5.0, 5.0, 5.0], upper=upper)
         Optim.minimizer(results)
         @test Optim.converged(results)
         @test all(Optim.minimizer(results) .<= upper)
 
         # tests for PR #267
-        Optim.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], show_trace=true)
+        LsqFit.levenberg_marquardt(f_lsq, g_lsq, [15.0, 15.0, 15.0], show_trace=true)
     end
 end
