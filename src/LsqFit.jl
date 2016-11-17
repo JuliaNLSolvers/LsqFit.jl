@@ -8,6 +8,7 @@ module LsqFit
     using Calculus
     using Distributions
 
+    include("levenberg_marquardt.jl")
     include("curve_fit.jl")
 
 end
