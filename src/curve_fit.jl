@@ -27,7 +27,7 @@ function lmfit(f::Function, p0; kwargs...)
 	g = Calculus.jacobian(f)
 
 	results = Optim.levenberg_marquardt(f, g, p0; kwargs...)
-	p = results.minimizer
+	p = Optim.minimizer(results)
 	resid = f(p)
 	dof = length(resid) - length(p)
 	return LsqFitResult(dof, p, f(p), g(p))
