@@ -8,6 +8,7 @@ ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 
 fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
 @assert norm(fit.param - [1.0, 2.0]) < 0.05
+@test fit.converged
 
 # can also get error estimates on the fit parameters
 errors = estimate_errors(fit)
