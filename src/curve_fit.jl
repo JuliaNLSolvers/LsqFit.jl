@@ -5,6 +5,7 @@ immutable LsqFitResult{T}
 	param::Vector{T}
 	resid::Vector{T}
 	jacobian::Matrix{T}
+	converged::Bool
 end
 
 function lmfit(f::Function, p0; kwargs...)
@@ -30,10 +31,11 @@ function lmfit(f::Function, p0; kwargs...)
 	p = Optim.minimizer(results)
 	resid = f(p)
 	dof = length(resid) - length(p)
+	converged = Optim.converged(results)
 	if typeof(p) <: AbstractVector
-		return LsqFitResult(dof, p, f(p), g(p))
+		return LsqFitResult(dof, p, f(p), g(p), converged)
 	else
-		return LsqFitResult(dof, [p], f(p), g([p]))
+		return LsqFitResult(dof, [p], f(p), g([p]), converged)
 	end
 end
 
