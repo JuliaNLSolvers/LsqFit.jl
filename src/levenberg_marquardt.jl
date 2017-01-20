@@ -3,14 +3,15 @@ immutable LevenbergMarquardt <: Optim.Optimizer end
 """
     `levenberg_marquardt(f, g, initial_x; <keyword arguments>`
 
-Returns the argmin over x of `sum(f(x).^2)` using the Levenberg-Marquardt algorithm, and an
-estimate of the Jacobian of `f` at x.
+Returns the argmin over x of `sum(f(x).^2)` using the Levenberg-Marquardt
+algorithm, and an estimate of the Jacobian of `f` at x.
 
-The function `f` should take an input vector of length n and return an output vector of length m.
-The function `g` is the Jacobian of f, and should be an m x n matrix.
-`initial_x` is an initial guess for the solution.
+The function `f` should take an input vector of length n and return an output
+vector of length m. The function `g` is the Jacobian of f, and should be an m x
+n matrix. `initial_x` is an initial guess for the solution.
 
-Implements box constraints as described in Kanzow, Yamashita, Fukushima (2004; J Comp & Applied Math).
+Implements box constraints as described in Kanzow, Yamashita, Fukushima (2004; J
+Comp & Applied Math).
 
 # Keyword arguments
 * `tolX::Real=1e-8`: search tolerance in x
