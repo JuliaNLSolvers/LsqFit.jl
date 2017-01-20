@@ -23,7 +23,7 @@ Comp & Applied Math).
 """
 function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVector{T};
     tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 100,
-    lambda::Real = 10.0, show_trace::Bool = false, lower::Vector{T} = Array(T,0), upper::Vector{T} = Array(T,0))
+    lambda::Real = 10.0, show_trace::Bool = false, lower::Vector{T} = Array{T}(0), upper::Vector{T} = Array{T}(0))
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
