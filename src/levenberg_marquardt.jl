@@ -54,11 +54,9 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
     residual = sumabs2(fcur)
 
     # Create buffers
-    m = length(fcur)
     n = length(x)
     JJ = Matrix{T}(n, n)
     n_buffer = Vector{T}(n)
-    m_buffer = Vector{T}(m)
 
     # Maintain a trace of the system.
     tr = Optim.OptimizationTrace{LevenbergMarquardt}()
@@ -88,7 +86,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
                 DtD[i] = MIN_DIAGONAL
             end
         end
-        # delta_x = ( J'*J + lambda * diagm(DtD) ) \ ( -J'*fcur )
+        # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*fcur )
         At_mul_B!(JJ, J, J)
         @simd for i in 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
@@ -110,16 +108,10 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         end
 
         # if the linear assumption is valid, our new residual should be:
-        # predicted_residual = sumabs2(J*delta_x + fcur)
-        A_mul_B!(m_buffer, J, delta_x)
-        LinAlg.axpy!(1, fcur, m_buffer)
-        predicted_residual = sumabs2(m_buffer)
+        predicted_residual = sumabs2(J*delta_x + fcur)
 
         # try the step and compute its quality
-        @simd for i in 1:n
-            @inbounds n_buffer[i] = x[i] + delta_x[i]
-        end
-        trial_f = f(n_buffer)
+        trial_f = f(x + delta_x)
         f_calls += 1
         trial_residual = sumabs2(trial_f)
         # step quality = residual change / predicted residual change
@@ -141,8 +133,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
 
         # show state
         if show_trace
-            At_mul_B!(n_buffer, J, fcur)
-            g_norm = norm(n_buffer, Inf)
+            g_norm = norm(J' * fcur, Inf)
             d = Dict("g(x)" => g_norm, "dx" => delta_x, "lambda" => lambda)
             os = Optim.OptimizationState{LevenbergMarquardt}(iterCt, sumabs2(fcur), g_norm, d)
             push!(tr, os)
@@ -152,8 +143,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         # check convergence criteria:
         # 1. Small gradient: norm(J^T * fcur, Inf) < tolG
         # 2. Small step size: norm(delta_x) < tolX
-        At_mul_B!(n_buffer, J, fcur)
-        if norm(n_buffer, Inf) < tolG
+        if norm(J' * fcur, Inf) < tolG
             g_converged = true
         elseif norm(delta_x) < tolX*(tolX + norm(x))
             x_converged = true
