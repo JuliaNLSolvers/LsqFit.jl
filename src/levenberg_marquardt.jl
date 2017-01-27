@@ -78,7 +78,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         # we want to solve:
         #    argmin 0.5*||J(x)*delta_x + f(x)||^2 + lambda*||diagm(J'*J)*delta_x||^2
         # Solving for the minimum gives:
-        #    (J'*J + lambda*diagm(DtD)) * delta_x == -J^T * f(x), where DtD = sumabs2(J,1)
+        #    (J'*J + lambda*diagm(DtD)) * delta_x == -J' * f(x), where DtD = sumabs2(J,1)
         # Where we have used the equivalence: diagm(J'*J) = diagm(sumabs2(J,1))
         # It is additionally useful to bound the elements of DtD below to help
         # prevent "parameter evaporation".
@@ -114,13 +114,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         A_mul_B!(m_buffer, J, delta_x)
         LinAlg.axpy!(1, fcur, m_buffer)
         predicted_residual = sumabs2(m_buffer)
-        # check for numerical problems in solving for delta_x by ensuring that the predicted residual is smaller
-        # than the current residual
-        if predicted_residual > residual + 2max(eps(predicted_residual),eps(residual))
-            warn("""Problem solving for delta_x: predicted residual increase.
-                             $predicted_residual (predicted_residual) >
-                             $residual (residual) + $(eps(predicted_residual)) (eps)""")
-        end
+
         # try the step and compute its quality
         @simd for i in 1:n
             @inbounds n_buffer[i] = x[i] + delta_x[i]
