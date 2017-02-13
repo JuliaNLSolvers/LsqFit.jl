@@ -7,6 +7,7 @@ module LsqFit
     using Optim
     using Calculus
     using Distributions
+    using Compat
 
     include("levenberg_marquardt.jl")
     include("curve_fit.jl")
