@@ -7,7 +7,7 @@ Returns the argmin over x of `sum(f(x).^2)` using the Levenberg-Marquardt
 algorithm, and an estimate of the Jacobian of `f` at x.
 
 The function `f` should take an input vector of length n and return an output
-vector of length m. The function `g` is the Jacobian of f, and should be an m x
+vector of length m. The function `g` is the Jacobian of f, and should return an m x
 n matrix. `initial_x` is an initial guess for the solution.
 
 Implements box constraints as described in Kanzow, Yamashita, Fukushima (2004; J
@@ -17,25 +17,35 @@ Comp & Applied Math).
 * `tolX::Real=1e-8`: search tolerance in x
 * `tolG::Real=1e-12`: search tolerance in gradient
 * `maxIter::Integer=100`: maximum number of iterations
+* `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
+* `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
 * `lambda::Real=10.0`: (inverse of) initial trust region radius
+* `lambda_increase=10.`: `lambda` is multiplied by this factor after step below min quality
+* `lambda_decrease=0.1`: `lambda` is multiplied by this factor after good quality steps
 * `show_trace::Bool=false`: print a status summary on each iteration if true
 * `lower,upper=[]`: bound solution to these limits
 """
 function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVector{T};
     tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 100,
-    lambda::Real = 10.0, show_trace::Bool = false, lower::Vector{T} = Array{T}(0), upper::Vector{T} = Array{T}(0))
+    lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
+    min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
+    show_trace::Bool = false, lower::Vector{T} = Array{T}(0), upper::Vector{T} = Array{T}(0)
+    )
+
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
             throw(ArgumentError("Bounds must either be empty or of the same length as the number of parameters."))
     ((isempty(lower) || all(initial_x .>= lower)) && (isempty(upper) || all(initial_x .<= upper))) ||
             throw(ArgumentError("Initial guess must be within bounds."))
+    (0 <= min_step_quality < 1) || throw(ArgumentError(" 0 <= min_step_quality < 1 must hold."))
+    (0 < good_step_quality <= 1) || throw(ArgumentError(" 0 < good_step_quality <= 1 must hold."))
+    (min_step_quality < good_step_quality) || throw(ArgumentError("min_step_quality < good_step_quality must hold."))
+
 
     # other constants
     const MAX_LAMBDA = 1e16 # minimum trust region radius
     const MIN_LAMBDA = 1e-16 # maximum trust region radius
-    const MIN_STEP_QUALITY = 1e-3
-    const GOOD_STEP_QUALITY = 0.75
     const MIN_DIAGONAL = 1e-6 # lower bound on values of diagonal matrix used to regularize the trust region step
 
 
@@ -116,18 +126,18 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         trial_residual = sum(abs2, trial_f)
         # step quality = residual change / predicted residual change
         rho = (trial_residual - residual) / (predicted_residual - residual)
-        if rho > MIN_STEP_QUALITY
+        if rho > min_step_quality
             x += delta_x
             fcur = trial_f
             residual = trial_residual
-            if rho > GOOD_STEP_QUALITY
+            if rho > good_step_quality
                 # increase trust region radius
-                lambda = max(0.1*lambda, MIN_LAMBDA)
+                lambda = max(lambda_decrease*lambda, MIN_LAMBDA)
             end
             need_jacobian = true
         else
             # decrease trust region radius
-            lambda = min(10*lambda, MAX_LAMBDA)
+            lambda = min(lambda_increase*lambda, MAX_LAMBDA)
         end
         iterCt += 1
 
