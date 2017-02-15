@@ -161,5 +161,23 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         converged = g_converged | x_converged
     end
 
-    Optim.MultivariateOptimizationResults("Levenberg-Marquardt", initial_x, x, sum(abs2, fcur), iterCt, !converged, x_converged, 0.0, false, 0.0, g_converged, tolG, false, tr, f_calls, g_calls, 0)
+    Optim.MultivariateOptimizationResults(
+        "Levenberg-Marquardt", # method
+        initial_x,             # initial_x
+        x,                     # minimizer
+        sum(abs2, fcur),       # minimum
+        iterCt,                # iterations
+        !converged,            # iteration_converged
+        x_converged,           # x_converged
+        0.0,                   # x_tol
+        false,                 # f_converged
+        0.0,                   # f_tol
+        g_converged,           # g_converged
+        tolG,                  # g_tol
+        false,                 # f_increased
+        tr,                    # trace
+        f_calls,               # f_calls
+        g_calls,               # g_calls
+        0                      # h_calls
+    )
 end
