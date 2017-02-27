@@ -42,12 +42,12 @@ errors = estimate_errors(fit, 0.95)
 Existing Functionality
 ----------------------
 
-`fit = curve_fit(model, x, y, w, p0; kwargs...)`:
+`fit = curve_fit(model, x, y, [w,] p0; kwargs...)`:
 
 * `model`: function that takes two arguments (x, params)
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
-* `w`: weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
+* `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
 * `fit`: composite type of results (`LsqFitResult`)
