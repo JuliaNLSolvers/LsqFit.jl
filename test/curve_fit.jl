@@ -17,13 +17,15 @@ let
 
     # some example data
     yvars = 1e-4*randn(length(xdata))
-    ydata = model(xdata, [1.0, 2.0]) + sqrt(yvars)*randn(length(xdata))
+    ydata = model(xdata, [1.0, 2.0]) + sqrt(yvars).*randn(length(xdata))
 
     fit = curve_fit(model, xdata, ydata, 1./sqrt(yvars), [0.5, 0.5])
+    println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
 
     # can also get error estimates on the fit parameters
     errors = estimate_errors(fit,yvars)
+    println("norm(errors - [0.017, 0.075]) < 0.01 ?", norm(errors - [0.017, 0.075]))
     @assert norm(errors - [0.017, 0.075]) < 0.01
 end

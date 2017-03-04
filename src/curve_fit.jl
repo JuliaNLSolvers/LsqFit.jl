@@ -79,13 +79,9 @@ end
 
 function estimate_covar(fit::LsqFitResult, vars::Vector{Float64})
     # computes covariance matrix of fit parameters
-    r = fit.resid
     J = fit.jacobian
 
-    Q,R = qr(Diagonal(1./sqrt(vars))*J)
-    Rinv = pinv(R)
-    return Rinv*Rinv'
-    #return inv(Symmetric(J'*Diagonal(1./vars)*J))
+    return inv(J'*Diagonal(1./vars)*J)
 end
 
 function estimate_errors(fit::LsqFitResult, alpha=0.95)
@@ -102,20 +98,21 @@ function estimate_errors(fit::LsqFitResult, alpha=0.95)
 	std_error *= quantile(dist, alpha)
 end
 
-function estimate_errors(fit::LsqFitResult, vars::Vector{Float64}, alpha=0.95)
-	# computes (1-alpha) error estimates from
-	#   fit   : a LsqFitResult from a curve_fit()
-	#   alpha : alpha percent confidence interval, (e.g. alpha=0.95 for 95% CI)
-	covar = estimate_covar(fit, vars)
-
-	# then the standard errors are given by the sqrt of the diagonal
-        vars = diag(covar)
-        if minimum(vars)/maximum(vars) < -1e-10
-            error("Covariance matrix is negative")
-        end
-       	std_error = sqrt(abs(vars))
-
-	# scale by quantile of the student-t distribution
-	dist = TDist(fit.dof)
-	std_error *= quantile(dist, alpha)
+function estimate_errors(fit::LsqFitResult, vars::Vector{Float64}, alpha=0.95; atol=1e-10)
+    # computes (1-alpha) error estimates from
+    #   fit   : a LsqFitResult from a curve_fit()
+    #   alpha : alpha percent confidence interval, (e.g. alpha=0.95 for 95% CI)
+    covar = estimate_covar(fit, vars)
+    
+    # then the standard errors are given by the sqrt of the diagonal
+    vars = diag(covar)
+    vratio = minimum(vars)/maximum(vars) 
+    if !isapprox(vratio, 0.0, atol=atol) && vratio < 0.0
+        error("Covariance matrix is negative")
+    end
+    std_error = sqrt(abs(vars))
+    
+    # scale by quantile of the student-t distribution
+    dist = TDist(fit.dof)
+    std_error *= quantile(dist, alpha)
 end
