@@ -1,4 +1,5 @@
 julia 0.4
 Calculus
 Distributions
-Optim 0.7.0
+Optim 0.7.5
+Compat 0.9.1

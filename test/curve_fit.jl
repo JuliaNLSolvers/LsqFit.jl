@@ -1,6 +1,7 @@
 let
     # fitting noisy data to an exponential model
-    model(x, p) = p[1]*exp(-x.*p[2])
+    # TODO: Change to `.-x` when 0.5 support is dropped
+    model(x, p) = @compat p[1] .* exp.(-x .* p[2])
 
     # some example data
     srand(12345)

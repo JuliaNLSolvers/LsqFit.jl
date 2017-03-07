@@ -17,7 +17,7 @@ function lmfit(f::Function, p0, covars; kwargs...)
 	# this minimizes f(p) using a least squares sum of squared error:
 	#   sse = sum(f(p)^2)
 	# This is currently embedded in Optim.levelberg_marquardt()
-	# which calls sumabs2
+	# which calls sum(abs2)
 	#
 	# returns p, f(p), g(p) where
 	#   p    : best fit parameters
@@ -69,7 +69,7 @@ function estimate_covar(fit::LsqFitResult)
 	r = fit.resid
 
 	# mean square error is: standard sum square error / degrees of freedom
-	mse = sumabs2(r) / fit.dof
+	mse = sum(abs2, r) / fit.dof
 
 	# compute the covariance matrix from the QR decomposition
 	Q,R = qr(J)
@@ -98,7 +98,7 @@ function estimate_errors(fit::LsqFitResult, alpha=0.95; rtol::Real=Base.rtoldefa
     if !isapprox(vratio, 0.0, atol=atol, rtol=rtol) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
-    std_error = sqrt(abs(vars))
+    std_error = @compat sqrt.(abs(vars))
     
     # scale by quantile of the student-t distribution
     dist = TDist(fit.dof)

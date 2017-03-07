@@ -1,9 +1,9 @@
 LsqFit.jl
 ===========
 
-The LsqFit package is a small library that provides basic least-squares fitting in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaOpt/Optim.jl), before being separated into this library.  At this time, `LsqFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
+The LsqFit package is a small library that provides basic least-squares fitting in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl), before being separated into this library.  At this time, `LsqFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
 
-[![Build Status](https://travis-ci.org/JuliaOpt/LsqFit.jl.svg)](https://travis-ci.org/JuliaOpt/LsqFit.jl)
+[![Build Status](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl.svg)](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl)
 
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.3.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.3)
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.4.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.4)
@@ -13,41 +13,41 @@ Basic Usage
 -----------
 
 There are top-level methods `curve_fit()` and `estimate_errors()` that are useful for fitting data to non-linear models. See the following example:
+```julia
+using LsqFit
 
-    using LsqFit
+# a two-parameter exponential model
+# x: array of independent variables
+# p: array of model parameters
+model(x, p) = p[1]*exp(-x.*p[2])
 
-    # a two-parameter exponential model
-    # x: array of independent variables
-    # p: array of model parameters
-    model(x, p) = p[1]*exp(-x.*p[2])
+# some example data
+# xdata: independent variables
+# ydata: dependent variable
+xdata = linspace(0,10,20)
+ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 
-    # some example data
-    # xdata: independent variables
-    # ydata: dependent variable
-    xdata = linspace(0,10,20)
-    ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
+fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
+# fit is a composite type (LsqFitResult), with some interesting values:
+#	fit.dof: degrees of freedom
+#	fit.param: best fit parameters
+#	fit.resid: residuals = vector of residuals
+#	fit.jacobian: estimated Jacobian at solution
 
-    fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
-    # fit is a composite type (LsqFitResult), with some interesting values:
-    #	fit.dof: degrees of freedom
-    #	fit.param: best fit parameters
-    #	fit.resid: residuals = vector of residuals
-    #	fit.jacobian: estimated Jacobian at solution
-
-    # We can estimate errors on the fit parameters,
-    # to get 95% confidence error bars:
-    errors = estimate_errors(fit, 0.95)
-
+# We can estimate errors on the fit parameters,
+# to get 95% confidence error bars:
+errors = estimate_errors(fit, 0.95)
+```
 
 Existing Functionality
 ----------------------
 
-`fit = curve_fit(model, x, y, w, p0; kwargs...)`:
+`fit = curve_fit(model, x, y, [w,] p0; kwargs...)`:
 
 * `model`: function that takes two arguments (x, params)
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
-* `w`: weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
+* `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
 * `fit`: composite type of results (`LsqFitResult`)

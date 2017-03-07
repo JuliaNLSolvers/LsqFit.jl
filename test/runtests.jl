@@ -2,7 +2,7 @@
 # Correctness Tests
 #
 
-using LsqFit, Optim, Base.Test
+using LsqFit, Optim, Base.Test, Compat
 
 my_tests = [ "curve_fit.jl", "levenberg_marquardt.jl"]
 
