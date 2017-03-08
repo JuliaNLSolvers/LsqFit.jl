@@ -92,7 +92,6 @@ function estimate_errors(fit::LsqFitResult, alpha=0.95; rtol::Real=NaN, atol::Re
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     covar = estimate_covar(fit)        
-    println("size of covar matrix: $(size(covar))")
     
     # then the standard errors are given by the sqrt of the diagonal
     vars = diag(covar)
@@ -104,7 +103,5 @@ function estimate_errors(fit::LsqFitResult, alpha=0.95; rtol::Real=NaN, atol::Re
     
     # scale by quantile of the student-t distribution
     dist = TDist(fit.dof)
-    println("size of std_error: $(size(std_error))")
-    println("size of quantile: $(size(quantile(dist,alpha)))")
     return std_error * quantile(dist, alpha)
 end
