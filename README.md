@@ -47,29 +47,32 @@ Existing Functionality
 * `model`: function that takes two arguments (x, params)
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
-* `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size) or matrix (inverse covariance)
+* `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
 * `fit`: composite type of results (`LsqFitResult`)
 
 
-This performs a fit using a non-linear iteration to minimize the (weighted) residual between the model and the dependent variable data (`y`). The weight (`w`) can be neglected (as per the example) to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point.
+This performs a fit using a non-linear iteration to minimize the (weighted) residual between the model and the dependent variable data (`y`). The weight (`w`) can be neglected (as per the example) to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point  (although unweighted error estimates are handled differently from weighted error estimates even when the weights are uniform).
 
 ----
 
-`sigma = estimate_errors(fit, alpha=0.95)`:
+`sigma = estimate_errors(fit, alpha=0.95; atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `alpha`: confidence limit to calculate for the errors on parameters
-* `sigma`: typical (symmetric) standard deviation for each parameter
+* `atol`: absolute tolerance for negativity check
+* `rtol`: relative tolerance for negativity check
 
 This returns the error or uncertainty of each parameter fit to the model and already scaled by the associated degrees of freedom.  Please note, this is a LOCAL quantity calculated from the jacobian of the model evaluated at the best fit point and NOT the result of a parameter exploration.
+
+If no weights are provided for the fits, the variance is estimated from the mean squared error of the fits. If weights are provided, the weights are assumed to be the inverse of the variances or of the covariance matrix, and errors are estimated based on these and the jacobian, assuming a linearization of the model around the minimum squared error point.
 
 ----
 
 `covar = estimate_covar(fit)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
-* `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point
+* `covar`: parameter covariance matrix calculated from the jacobian of the model at the fit point, using the weights (if specified) as the inverse covariance of observations
 
 This returns the parameter covariance matrix evaluted at the best fit point.
