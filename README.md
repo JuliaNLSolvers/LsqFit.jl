@@ -19,7 +19,7 @@ using LsqFit
 # a two-parameter exponential model
 # x: array of independent variables
 # p: array of model parameters
-model(x, p) = p[1]*exp(-x.*p[2])
+model(x, p) = p[1]*exp.(-x.*p[2])
 
 # some example data
 # xdata: independent variables
@@ -42,8 +42,8 @@ errors = estimate_errors(fit, 0.95)
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
 function jacobian_model(x,p)
-    J = Array(Float64,length(x),length(p))
-    J[:,1] = exp(-x.*p[2])     #dmodel/dp[1]
+    J = Array{Float64}(length(x),length(p))
+    J[:,1] = exp.(-x.*p[2])    #dmodel/dp[1]
     J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
     J
 end
