@@ -91,16 +91,16 @@ function estimate_errors(fit::LsqFitResult, alpha=0.95; rtol::Real=NaN, atol::Re
     #   alpha : alpha percent confidence interval, (e.g. alpha=0.95 for 95% CI)
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    covar = estimate_covar(fit)        
-    
+    covar = estimate_covar(fit)
+
     # then the standard errors are given by the sqrt of the diagonal
     vars = diag(covar)
-    vratio = minimum(vars)/maximum(vars) 
+    vratio = minimum(vars)/maximum(vars)
     if !isapprox(vratio, 0.0, atol=atol, rtol=isnan(rtol)?Base.rtoldefault(vratio,0.0):rtol) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
-    std_error = @compat sqrt.(abs(vars))
-    
+    std_error = @compat sqrt.(abs.(vars))
+
     # scale by quantile of the student-t distribution
     dist = TDist(fit.dof)
     return std_error * quantile(dist, alpha)
