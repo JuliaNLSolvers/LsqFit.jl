@@ -162,7 +162,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
     end
 
     Optim.MultivariateOptimizationResults(
-        "Levenberg-Marquardt", # method
+        LevenbergMarquardt(),  # method
         initial_x,             # initial_x
         x,                     # minimizer
         sum(abs2, fcur),       # minimum
