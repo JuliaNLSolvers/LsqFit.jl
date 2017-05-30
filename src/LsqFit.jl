@@ -9,6 +9,8 @@ module LsqFit
     using Distributions
     using Compat
 
+    import Base.summary
+
     include("levenberg_marquardt.jl")
     include("curve_fit.jl")
 
