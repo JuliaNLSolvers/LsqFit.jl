@@ -11,10 +11,10 @@ end
 # provide a method for those who have their own Jacobian function
 function lmfit(f::Function, g::Function, p0, wt; kwargs...)
     results = levenberg_marquardt(f, g, p0; kwargs...)
-    p = Optim.minimizer(results)
+    p = minimizer(results)
     resid = f(p)
     dof = length(resid) - length(p)
-    return LsqFitResult(dof, p, f(p), g(p), Optim.converged(results), wt)
+    return LsqFitResult(dof, p, f(p), g(p), converged(results), wt)
 end
 
 function lmfit(f::Function, p0, wt; kwargs...)
