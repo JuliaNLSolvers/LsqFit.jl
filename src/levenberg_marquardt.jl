@@ -1,5 +1,5 @@
-immutable LevenbergMarquardt <: Optim.Optimizer end
-
+immutable LevenbergMarquardt <: Optimizer end
+Base.summary(::LevenbergMarquardt) = "Levenberg-Marquardt"
 """
     `levenberg_marquardt(f, g, initial_x; <keyword arguments>`
 
@@ -69,10 +69,10 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
     n_buffer = Vector{T}(n)
 
     # Maintain a trace of the system.
-    tr = Optim.OptimizationTrace{LevenbergMarquardt}()
+    tr = OptimizationTrace{LevenbergMarquardt}()
     if show_trace
         d = Dict("lambda" => lambda)
-        os = Optim.OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), NaN, d)
+        os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), NaN, d)
         push!(tr, os)
         println(os)
     end
@@ -145,7 +145,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         if show_trace
             g_norm = norm(J' * fcur, Inf)
             d = Dict("g(x)" => g_norm, "dx" => delta_x, "lambda" => lambda)
-            os = Optim.OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), g_norm, d)
+            os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), g_norm, d)
             push!(tr, os)
             println(os)
         end
@@ -161,8 +161,8 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         converged = g_converged | x_converged
     end
 
-    Optim.MultivariateOptimizationResults(
-        "Levenberg-Marquardt", # method
+    MultivariateOptimizationResults(
+        LevenbergMarquardt(),    # method
         initial_x,             # initial_x
         x,                     # minimizer
         sum(abs2, fcur),       # minimum
@@ -170,10 +170,13 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         !converged,            # iteration_converged
         x_converged,           # x_converged
         0.0,                   # x_tol
+        0.0,
         false,                 # f_converged
         0.0,                   # f_tol
+        0.0,
         g_converged,           # g_converged
         tolG,                  # g_tol
+        0.0,
         false,                 # f_increased
         tr,                    # trace
         f_calls,               # f_calls

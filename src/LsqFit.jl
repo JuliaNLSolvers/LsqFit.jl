@@ -4,10 +4,12 @@ module LsqFit
            estimate_errors,
            estimate_covar
 
-    using Optim
     using Calculus
     using Distributions
     using Compat
+    using OptimBase
+
+    import Base.summary
 
     include("levenberg_marquardt.jl")
     include("curve_fit.jl")
