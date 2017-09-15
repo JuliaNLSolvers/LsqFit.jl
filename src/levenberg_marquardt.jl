@@ -44,9 +44,9 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
 
 
     # other constants
-    const MAX_LAMBDA = 1e16 # minimum trust region radius
-    const MIN_LAMBDA = 1e-16 # maximum trust region radius
-    const MIN_DIAGONAL = 1e-6 # lower bound on values of diagonal matrix used to regularize the trust region step
+    MAX_LAMBDA = 1e16 # minimum trust region radius
+    MIN_LAMBDA = 1e-16 # maximum trust region radius
+    MIN_DIAGONAL = 1e-6 # lower bound on values of diagonal matrix used to regularize the trust region step
 
 
     converged = false
@@ -77,6 +77,7 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         println(os)
     end
 
+    local J
     while (~converged && iterCt < maxIter)
         if need_jacobian
             J = g(x)
