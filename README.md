@@ -56,7 +56,7 @@ Existing Functionality
 `fit = curve_fit(model, [jacobian], x, y, [w,] p0; kwargs...)`:
 
 * `model`: function that takes two arguments (x, params)
-# `jacobian`: (optional) function that returns the Jacobian matrix of `model`
+* `jacobian`: (optional) function that returns the Jacobian matrix of `model`
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
 * `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
