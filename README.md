@@ -30,8 +30,11 @@ p0 = [0.5, 0.5]
 
 fit = curve_fit(model, xdata, ydata, p0)
 # fit is a composite type (LsqFitResult), with some interesting values:
+#	fit.model: model used for the fit
 #	fit.dof: degrees of freedom
 #	fit.param: best fit parameters
+#	fit.rsquared: coefficient of determination
+#	fit.stderror: standard error of the estimate
 #	fit.resid: residuals = vector of residuals
 #	fit.jacobian: estimated Jacobian at solution
 
