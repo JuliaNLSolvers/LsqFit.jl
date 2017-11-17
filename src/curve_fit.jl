@@ -38,6 +38,36 @@ function lmfit(f::Function, p0, wt; kwargs...)
     lmfit(f, g, p0, wt; kwargs...)
 end
 
+
+"""
+    curve_fit(model, xdata, ydata, p0) -> fit
+Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
+The return object is a composite type (`LsqFitResult`), with some interesting values:
+
+* `fit.dof` : degrees of freedom
+* `fit.param` : best fit parameters
+* `fit.resid` : residuals = vector of residuals
+* `fit.jacobian` : estimated Jacobian at solution
+
+## Example
+```julia
+# a two-parameter exponential model
+# x: array of independent variables
+# p: array of model parameters
+model(x, p) = p[1]*exp.(-x.*p[2])
+
+# some example data
+# xdata: independent variables
+# ydata: dependent variable
+xdata = linspace(0,10,20)
+ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
+p0 = [0.5, 0.5]
+
+fit = curve_fit(model, xdata, ydata, p0)
+```
+"""
+function curve_fit end
+
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     # construct the cost function
     f(p) = model(xpts, p) - ydata
