@@ -79,8 +79,6 @@ end
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     # construct the cost function
     f(p) = model(xpts, p) - ydata
-    # wt = fill(eltype(ydata)(1), length(xpts))
-    # wt = eltype(ydata)[]
     T = eltype(ydata)
     lmfit(model, xpts, ydata, f, p0, T[]; kwargs...)
 end
@@ -89,8 +87,6 @@ function curve_fit(model::Function, jacobian_model::Function,
             xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     f(p) = model(xpts, p) - ydata
     g(p) = jacobian_model(xpts, p)
-    # wt = fill(eltype(ydata)(1), length(xpts))
-    # wt = eltype(ydata)[]
     T = eltype(ydata)
     lmfit(model, xpts, ydata, f, g, p0, T[]; kwargs...)
 end
