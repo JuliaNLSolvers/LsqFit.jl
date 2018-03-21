@@ -1,14 +1,23 @@
-immutable LsqFitResult{T,N}
+struct GoodnessOfFit{T}
+    sse::T
+    ssr::T
+    sst::T
+    mse::T
+    rmse::T
+    rsquared::T
+    adjrsquared::T
+end
+
+struct LsqFitResult{T,N}
     # simple type container for now, but can be expanded later
     model::Function
     dof::Int
     param::Vector{T}
     resid::Vector{T}
-    rsquared::Float64
-    stderror::Float64
     jacobian::Matrix{T}
     converged::Bool
     wt::Array{T,N}
+    gof::GoodnessOfFit
 end
 
 # provide a method for those who have their own Jacobian function
@@ -16,11 +25,34 @@ function lmfit(model::Function, xpts::AbstractArray, ydata::AbstractArray, f::Fu
     results = levenberg_marquardt(f, g, p0; kwargs...)
     p = minimizer(results)
     resid = f(p)
-    prediction = model(xpts, p)
-    rsquared = sum((prediction - mean(ydata)).^2) / sum((ydata - mean(ydata)).^2)
-    stderror = sqrt(sum((prediction - resid).^2) / length(prediction))
     dof = length(resid) - length(p)
-    return LsqFitResult(model, dof, p, resid, rsquared, stderror, g(p), converged(results), wt)
+    
+    # Evaluate the goodness of the fit where
+    #   sse: Sum of Squares due to Error
+    #   ssr: Sum of Squares of the Regression
+    #   sst: Sum of Squares about the mean
+    #   rsquared: R-Squared
+    #   adjrsquared: Adjusted R-Squared
+    #   mse: Mean Squared Error
+    #   rmse: Root Mean Squared Error
+
+    if isempty(wt)
+        wts = 1.0
+    else
+        wts = wt.^2
+    end
+
+    prediction = model(xpts, p)
+    sse = sum(wts .* (prediction .- ydata).^2)
+    ssr = sum(wts .* (prediction - mean(ydata)).^2)
+    sst = sum(wts .* (ydata - mean(ydata)).^2)
+    rsquared = ssr / sst
+    adjrsquared = 1 - sse * (length(ydata) - 1) / (sst * dof)
+    mse = sse / dof
+    rmse = sqrt(sse / dof)
+    gof = GoodnessOfFit(sse, ssr, sst, mse, rmse, rsquared, adjrsquared)
+    
+    return LsqFitResult(model, dof, p, resid, g(p), converged(results), wt, gof)
 end
 
 function lmfit(model::Function, xpts::AbstractArray, ydata::AbstractArray, f::Function, p0, wt; kwargs...)
@@ -47,6 +79,8 @@ end
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     # construct the cost function
     f(p) = model(xpts, p) - ydata
+    # wt = fill(eltype(ydata)(1), length(xpts))
+    # wt = eltype(ydata)[]
     T = eltype(ydata)
     lmfit(model, xpts, ydata, f, p0, T[]; kwargs...)
 end
@@ -55,6 +89,8 @@ function curve_fit(model::Function, jacobian_model::Function,
             xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     f(p) = model(xpts, p) - ydata
     g(p) = jacobian_model(xpts, p)
+    # wt = fill(eltype(ydata)(1), length(xpts))
+    # wt = eltype(ydata)[]
     T = eltype(ydata)
     lmfit(model, xpts, ydata, f, g, p0, T[]; kwargs...)
 end
