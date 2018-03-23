@@ -14,7 +14,7 @@ let
     @test fit.converged
 
     # can also get error estimates on the fit parameters
-    errors = estimate_errors(fit)
+    errors = margin_errors(fit, 0.1)
     @assert norm(errors - [0.017, 0.075]) < 0.01
 
     # if your model is differentiable, it can be faster and/or more accurate
@@ -39,7 +39,7 @@ let
     @test fit.converged
 
     # can also get error estimates on the fit parameters
-    errors = estimate_errors(fit)
+    errors = margin_errors(fit, 0.1)
     println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
     @assert norm(errors - [0.017, 0.075]) < 0.1
 

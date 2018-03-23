@@ -2,6 +2,8 @@ module LsqFit
 
     export curve_fit,
            estimate_errors,
+           standard_errors,
+           margin_errors,
            estimate_covar
 
     using Calculus

@@ -143,23 +143,47 @@ function estimate_covar(fit::LsqFitResult)
     return covar
 end
 
-function estimate_errors(fit::LsqFitResult, alpha=0.95; rtol::Real=NaN, atol::Real=0)
-    # computes (1-alpha) error estimates from
+function standard_errors(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+    # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
-    #   alpha : alpha percent confidence interval, (e.g. alpha=0.95 for 95% CI)
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     covar = estimate_covar(fit)
-
     # then the standard errors are given by the sqrt of the diagonal
     vars = diag(covar)
     vratio = minimum(vars)/maximum(vars)
     if !isapprox(vratio, 0.0, atol=atol, rtol=isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
-    std_error = sqrt.(abs.(vars))
+    return sqrt.(abs.(vars))
+end
 
-    # scale by quantile of the student-t distribution
+function margin_errors(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+    # computes margin of errors at alpha significance level from
+    #   fit   : a LsqFitResult from a curve_fit()
+    #   alpha : significance leverl, e.g. alpha=0.05 for 95% confidence
+    #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
+    #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
+    std_errors = standard_errors(fit; rtol=rtol, atol=atol)
     dist = TDist(fit.dof)
-    return std_error * quantile(dist, alpha)
+    critical_values = quantile(dist, 1 - alpha/2)
+    # scale standard errors by quantile of the student-t distribution (critical values)
+    return std_errors * critical_values
+end
+
+function estimate_errors(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+    # print standard errors, margin of errors and confidence intervals from
+    #   fit   : a LsqFitResult from a curve_fit()
+    #   alpha : significance leverl, e.g. alpha=0.05 for 95% confidence
+    #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
+    #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
+    std_errors = standard_errors(fit; rtol=rtol, atol=atol)
+    margin_of_errors = margin_errors(fit, alpha; rtol=rtol, atol=atol)
+    confidence = 1 - alpha
+    confidence_intervals = zip(fit.param-margin_of_errors, fit.param+margin_of_errors)
+    println("standard errors: $std_errors")
+    println("margin of errors: $margin_of_errors")
+    for (i, interval) in enumerate(confidence_intervals)
+        println("parameter[$i] $confidence confidence interval: $interval")
+    end
 end
