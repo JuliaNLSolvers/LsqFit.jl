@@ -1,9 +1,9 @@
 module LsqFit
 
     export curve_fit,
-           estimate_errors,
-           standard_errors,
-           margin_errors,
+           standard_error,
+           margin_error,
+           confidence_interval,
            estimate_covar
 
     using Calculus
