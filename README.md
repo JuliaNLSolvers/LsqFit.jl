@@ -36,9 +36,11 @@ fit = curve_fit(model, xdata, ydata, p0)
 #	fit.jacobian: estimated Jacobian at solution
 
 # We can estimate errors on the fit parameters,
-# to get standard errors and margin of errors at 5% significance level:
-sigma = standard_errors(fit)
-margin_of_errors = margin_errors(fit, 0.05)
+# to get standard error of each parameter:
+sigma = standard_error(fit)
+# to get margin of error and confidence interval of each parameter at 5% significance level:
+margin_of_error = margin_error(fit, 0.05)
+confidence_interval = confidence_interval(fit, 0.05)
 
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
@@ -70,7 +72,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 
 ----
 
-`sigma = standard_errors(fit; atol, rtol)`:
+`sigma = standard_error(fit; atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `atol`: absolute tolerance for negativity check
@@ -80,24 +82,23 @@ This returns the error or uncertainty of each parameter fit to the model and alr
 
 If no weights are provided for the fits, the variance is estimated from the mean squared error of the fits. If weights are provided, the weights are assumed to be the inverse of the variances or of the covariance matrix, and errors are estimated based on these and the jacobian, assuming a linearization of the model around the minimum squared error point.
 
-
-`margin_of_errors = margin_errors(fit, alpha=0.05; atol, rtol)`:
-
-* `fit`: result of curve_fit (a `LsqFitResult` type)
-* `alpha`: significance level
-* `atol`: absolute tolerance for negativity check
-* `rtol`: relative tolerance for negativity check
-
-This returns the product of standard errors and critical values at `alpha` significance level.
-
-`estimate_errors(fit, alpha=0.05; atol, rtol)`:
+`margin_of_error = margin_error(fit, alpha=0.05; atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `alpha`: significance level
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check
 
-This prints out estimated standard errors, margin of errors and confidence intervals at `alpha` significance level.
+This returns the product of standard error and critical value of each parameter at `alpha` significance level.
+
+`confidence_interval = confidence_interval(fit, alpha=0.05; atol, rtol)`:
+
+* `fit`: result of curve_fit (a `LsqFitResult` type)
+* `alpha`: significance level
+* `atol`: absolute tolerance for negativity check
+* `rtol`: relative tolerance for negativity check
+
+This returns confidence interval of each parameter at `alpha` significance level.
 
 ----
 

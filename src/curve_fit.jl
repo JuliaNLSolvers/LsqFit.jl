@@ -143,7 +143,7 @@ function estimate_covar(fit::LsqFitResult)
     return covar
 end
 
-function standard_errors(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function standard_error(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
@@ -158,32 +158,28 @@ function standard_errors(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     return sqrt.(abs.(vars))
 end
 
-function margin_errors(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
-    # computes margin of errors at alpha significance level from
+function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+    # computes margin of error at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
-    #   alpha : significance leverl, e.g. alpha=0.05 for 95% confidence
+    #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = standard_errors(fit; rtol=rtol, atol=atol)
+    std_errors = standard_error(fit; rtol=rtol, atol=atol)
     dist = TDist(fit.dof)
     critical_values = quantile(dist, 1 - alpha/2)
     # scale standard errors by quantile of the student-t distribution (critical values)
     return std_errors * critical_values
 end
 
-function estimate_errors(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
-    # print standard errors, margin of errors and confidence intervals from
+function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+    # computes confidence intervals at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
-    #   alpha : significance leverl, e.g. alpha=0.05 for 95% confidence
+    #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = standard_errors(fit; rtol=rtol, atol=atol)
-    margin_of_errors = margin_errors(fit, alpha; rtol=rtol, atol=atol)
-    confidence = 1 - alpha
-    confidence_intervals = zip(fit.param-margin_of_errors, fit.param+margin_of_errors)
-    println("standard errors: $std_errors")
-    println("margin of errors: $margin_of_errors")
-    for (i, interval) in enumerate(confidence_intervals)
-        println("parameter[$i] $confidence confidence interval: $interval")
-    end
+    std_errors = standard_error(fit; rtol=rtol, atol=atol)
+    margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
+    confidence_intervals = collect(zip(fit.param-margin_of_errors, fit.param+margin_of_errors))
 end
+
+@deprecate estimate_errors(fit::LsqFitResult, confidence=0.95; rtol::Real=NaN, atol::Real=0) margin_error(fit, 1-confidence; rtol=rtol, atol=atol)
