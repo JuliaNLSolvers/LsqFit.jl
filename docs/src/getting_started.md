@@ -1,6 +1,8 @@
 
 # Getting Started
 
+## Estimate Parameters
+
 First, import the package.
 
 ```julia
@@ -42,10 +44,27 @@ julia> fit = curve_fit(model, xdata, ydata, p0)
 
 It will return a composite type (`LsqFitResult`), with some interesting values:
 
--	`fit.dof`: degrees of freedom
--	`fit.param`: best fit parameters
--	`fit.resid`: residuals = vector of residuals
--	`fit.jacobian`: estimated Jacobian at solution
+*	`fit.dof`: degrees of freedom
+*	`fit.param`: best fit parameters
+*	`fit.resid`: residuals = vector of residuals
+*	`fit.jacobian`: estimated Jacobian at solution
+
+## Provide the Jacobian
+
+The finite difference method is used above to approximate the Jacobian (or gradient function). Alternatively, a function which calculates the Jacobian exactly can be supplied instead.
+
+```Julia
+function jacobian_model(x,p)
+    J = Array{Float64}(length(x),length(p))
+    J[:,1] = exp.(p[2] * x)    #dmodel/dp[1]
+    J[:,2] = x.*p[1].*J[:,1]   #dmodel/dp[2]
+    J
+end
+
+fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
+```
+
+## Estimate Errors
 
 There are also several functions to help estimate the error. `standard_error` returns the standard error of each parameter.
 
@@ -74,17 +93,4 @@ julia> confidence_interval = confidence_interval(fit, 0.1)
  (1.91047, 2.09096)
 ```
 
-The finite difference method is used above to approximate the Jacobian. Alternatively, a function which calculates the Jacobian exactly can be supplied instead.
-
-```Julia
-function jacobian_model(x,p)
-    J = Array{Float64}(length(x),length(p))
-    J[:,1] = exp.(p[2] * x)    #dmodel/dp[1]
-    J[:,2] = x.*p[1].*J[:,1]   #dmodel/dp[2]
-    J
-end
-
-fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
-```
-
-For more details of `LsqFit.jl`, check the API section.
+For more details of `LsqFit.jl`, check the API Reference section.

@@ -8,12 +8,11 @@ makedocs(
     pages = Any[
             "Home" => "index.md",
             "Getting Started" => "getting_started.md",
-            # "Examples" => GENERATEDEXAMPLES,
-            "API" => "api.md",
+            "API Reference" => "api.md",
             ],
     # Use clean URLs, unless built as a "local" build
     html_prettyurls = !("local" in ARGS),
-    html_canonical = "https://juliadocs.github.io/Documenter.jl/stable/",
+    html_canonical = "https://julianlsolvers.github.io/LineSearches.jl/stable/"
     )
 
 deploydocs(
