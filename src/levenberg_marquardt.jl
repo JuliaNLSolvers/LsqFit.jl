@@ -13,7 +13,7 @@ n matrix. `initial_x` is an initial guess for the solution.
 Implements box constraints as described in Kanzow, Yamashita, Fukushima (2004; J
 Comp & Applied Math).
 
-# Keyword arguments
+# Arguments
 * `tolX::Real=1e-8`: search tolerance in x
 * `tolG::Real=1e-12`: search tolerance in gradient
 * `maxIter::Integer=100`: maximum number of iterations
