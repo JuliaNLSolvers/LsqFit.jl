@@ -142,4 +142,5 @@ julia> confidence_interval = confidence_interval(fit, 0.1)
  (1.91047, 2.09096)
 ```
 
-## References
+## Reference
+Ruckstuhl, A. ‘Introduction to Nonlinear Regression’, Nonlinear Regression, p. 30.

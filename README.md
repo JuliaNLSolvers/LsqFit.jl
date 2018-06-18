@@ -4,6 +4,7 @@ LsqFit.jl
 The LsqFit package is a small library that provides basic least-squares fitting in pure Julia under an MIT license. The basic functionality was originaly in [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl), before being separated into this library.  At this time, `LsqFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
 
 [![Build Status](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl.svg)](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl)
+![][docs-stable-img]][docs-stable-url]
 
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.5.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.5)
 [![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.6.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.5)
