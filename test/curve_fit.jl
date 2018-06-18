@@ -43,6 +43,12 @@ let
     println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
     @assert norm(errors - [0.017, 0.075]) < 0.1
 
+    # the result should be the same if provide weights of ones
+    fit = curve_fit(model, xdata, ydata, [0.5, 0.5])
+    w_fit = curve_fit(model, xdata, ydata, ones(length(ydata)), [0.5, 0.5])
+    println("norm(standard_error(fit) - standard_error(fit)) < 0.001 ?", norm(standard_error(fit) - standard_error(fit)) < 0.001)
+    @assert norm(standard_error(fit) - standard_error(fit)) < 0.001
+
     # test with user-supplied jacobian and weights
     fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5])
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))

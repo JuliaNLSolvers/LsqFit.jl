@@ -8,6 +8,7 @@ makedocs(
     pages = Any[
             "Home" => "index.md",
             "Getting Started" => "getting_started.md",
+            "Tutorial" => "tutorial.md",
             "API Reference" => "api.md",
             ],
     # Use clean URLs, unless built as a "local" build

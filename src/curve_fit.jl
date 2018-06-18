@@ -40,7 +40,7 @@ end
 
 
 """
-    curve_fit(model, [jacobian], x, y, [w,] p0; kwargs...)  -> fit
+    curve_fit(model, [jacobian], x, y, [w,] p0; kwargs...)
 
 Fit data to a non-linear `model` by minimizing the (weighted) residual between the model and the dependent variable data (`y`). `p0` is an initial model parameter guess.
 
@@ -50,7 +50,7 @@ The return object is a composite type (`LsqFitResult`), with some interesting va
 
 * `fit.dof` : degrees of freedom
 * `fit.param` : best fit parameters
-* `fit.resid` : residuals = vector of residuals
+* `fit.resid` : vector of residuals
 * `fit.jacobian` : estimated Jacobian at solution
 
 # Arguments
@@ -65,19 +65,18 @@ The return object is a composite type (`LsqFitResult`), with some interesting va
 # Example
 ```julia
 # a two-parameter exponential model
-# x: array of independent variables
+# t: array of independent variables
 # p: array of model parameters
-julia> model(x, p) = p[1] * exp.(p[2] * x)
+julia> model(x, p) = p[1] * exp.(-p[2] * t)
 
 # some example data
-# xdata: independent variables
+# tdata: independent variables
 # ydata: dependent variable
-julia> xdata = linspace(0,10,20)
-julia> ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
+julia> tdata = linspace(0,10,20)
+julia> ydata = model(tdata, [1.0 2.0]) + 0.01*randn(length(tdata))
 julia> p0 = [0.5, 0.5]
 
-julia> fit = curve_fit(model, xdata, ydata, p0)
-LsqFit.LsqFitResult{Float64,1}(18, [0.996223, 2.00072], [-0.00160857, 0.00723244, -0.00493032, 0.00119351, -0.0223911, -0.0101366, 0.0113838, -0.00430412, -0.00236449, 0.0224702, -0.00651778, 0.00428345, -0.00572207, -0.00449484, -0.010057, -0.00853999, -0.0166378, 0.0160573, 0.00716414, -0.0138125], [1.0 0.0; 0.348886 -0.182931; …; 5.86553e-9 -5.53585e-8; 2.04642e-9 -2.03868e-8], true, Float64[])
+julia> fit = curve_fit(model, tdata, ydata, p0)
 ```
 """
 function curve_fit end
@@ -134,24 +133,29 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, wt; kwargs...)
 end
 
+"""
+    estimate_covar(fit)
+
+Computes the covariance matrix of fit parameters from the jacobian of the model at the fit point, using the weights (if specified) as the inverse covariance of observations.
+"""
 function estimate_covar(fit::LsqFitResult)
-    # computes covariance matrix of fit parameters
     J = fit.jacobian
+    r = fit.resid
+    # σ^2 = sum of squared error / degrees of freedom
+    sigma_sqr = sum(abs2, r) / fit.dof
 
     if isempty(fit.wt)
-        r = fit.resid
-
-        # mean square error is: standard sum square error / degrees of freedom
-        mse = sum(abs2, r) / fit.dof
-
         # compute the covariance matrix from the QR decomposition
         Q,R = qr(J)
         Rinv = inv(R)
-        covar = Rinv*Rinv'*mse
+        covar = Rinv*Rinv'*sigma_sqr
     elseif length(size(fit.wt)) == 1
-        covar = inv(J'*Diagonal(fit.wt)*J)
+        # compute the covariance matrix from the Jacobian and a vector weight
+        covar = inv(J'*Diagonal(fit.wt)*J)*sigma_sqr
     else
-        covar = inv(J'*fit.wt*J)
+        # compute the covariance matrix from the Jacobian and a matrix weights
+        covar = inv(J'*fit.wt*J)*sigma_sqr
+
     end
 
     return covar
@@ -162,7 +166,7 @@ end
 
 Compute the standard error of parameter estimates from `LsqFitResult`.
 
-If no weights are provided for the fits, the variance is estimated from the mean squared error of the fits. If weights are provided, the weights are assumed to be the inverse of the variances or of the covariance matrix, and errors are estimated based on these and the jacobian, assuming a linearization of the model around the minimum squared error point.
+If no weights are provided for the fits, the variance is estimated from the squared error of the fits / degress of freedom. If weights are provided, the weights are assumed to be the inverse of the variances or of the covariance matrix, and errors are estimated based on these and the jacobian, assuming a linearization of the model around the minimum squared error point.
 
 !!! note
 
