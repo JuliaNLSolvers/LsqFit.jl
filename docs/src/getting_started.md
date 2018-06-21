@@ -7,14 +7,16 @@ First, import the package.
 julia> using LsqFit
 ```
 
-Define a two-parameter exponential model, where ``x_t`` is the output, ``x_0`` and ``r`` are parameters.
+Define a two-parameter exponential decay model, where ``t`` is a one-element independent variable, ``p_1`` and ``p_2`` are parameters.
+
+The model function is:
 
 ```math
-x_t = x_0 e^{-rt}
+m(t, \boldsymbol{p}) = p_1 \exp(-p_2 t)
 ```
 
 ```julia
-julia> # t: array of independent variables
+julia> # t: array of independent variable
 julia> # p: array of model parameters
 julia> model(t, p) = p[1] * exp.(-p[2] * t)
 ```
@@ -22,13 +24,13 @@ julia> model(t, p) = p[1] * exp.(-p[2] * t)
 For illustration purpose, we generate some fake data.
 
 ```julia
-julia> # tdata: independent variables
-julia> # ydata: dependent variable
+julia> # tdata: data of independent variable
+julia> # ydata: data of dependent variable
 julia> tdata = linspace(0,10,20)
 julia> ydata = model(tdata, [1.0 2.0]) + 0.01*randn(length(tdata))
 ```
 
-Before fitting the data, we also need define a initial value of parameters for `curve_fit()`.
+Before fitting the data, we also need a initial value of parameters for `curve_fit()`.
 
 ```julia
 julia> p0 = [0.5, 0.5]
@@ -71,4 +73,4 @@ julia> confidence_interval = confidence_interval(fit, 0.1)
  (1.98537, 2.16162)
 ```
 
-For more details of `LsqFit.jl`, check [Manual](../manual/) and [API Reference](../api/) section.
+For more details of `LsqFit.jl`, check [Tutorial](../tutorial/) and [API References](../api/) section.

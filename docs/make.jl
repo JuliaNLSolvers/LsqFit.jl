@@ -9,7 +9,7 @@ makedocs(
             "Home" => "index.md",
             "Getting Started" => "getting_started.md",
             "Tutorial" => "tutorial.md",
-            "API Reference" => "api.md",
+            "API References" => "api.md",
             ],
     # Use clean URLs, unless built as a "local" build
     html_prettyurls = !("local" in ARGS),
