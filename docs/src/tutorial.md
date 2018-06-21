@@ -38,12 +38,12 @@ julia> p0 = [0.5, 0.5]
 julia> fit = curve_fit(m, tdata, ydata, p0)
 ```
 
-It will return return a composite type `LsqFitResult`, with some interesting values:
+It will return a composite type `LsqFitResult`, with some interesting values:
 
 *	`fit.dof`: degrees of freedom
 *	`fit.param`: best fit parameters
 *	`fit.resid`: vector of residuals
-*	`fit.jacobian`: estimated Jacobian at solution
+*	`fit.jacobian`: estimated Jacobian at the solution
 
 ## Jacobian Calculation
 
@@ -131,7 +131,7 @@ which is a linear function on $\boldsymbol{h}$ since ${\boldsymbol{\gamma}}$ is 
 
 ## Goodness of Fit
 
-The linear approximation of the non-linear least squares problem leads to the approximation of the covariance martrix of each parameter, from which we can perform regression analysis.
+The linear approximation of the non-linear least squares problem leads to the approximation of the covariance matrix of each parameter, from which we can perform regression analysis.
 
 Consider a least squares solution $\boldsymbol{\gamma}^*$, which is a local minimizer of the non-linear problem:
 
@@ -342,7 +342,7 @@ If we only know **the relative ratio of different variances**, i.e. $\epsilon \s
 \mathbf{Cov}(\boldsymbol{\gamma}^*) = \sigma^2[J'WJ]^{-1}
 ```
 
-where $\sigma^2$ is estimated. In this case, if we set $W = I$, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of estimated parameter is calculated as `covar = inv(J'*fit.wt*J)`.
+where $\sigma^2$ is estimated. In this case, if we set $W = I$, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of the estimated parameter is calculated as `covar = inv(J'*fit.wt*J)`.
 
 !!! note
     Passing vector of ones as the weight vector will cause mistakes in covariance estimation.
@@ -376,17 +376,17 @@ julia> cov = estimate_covar(fit)
 ```
 
 ## Estimate the Optimal Weight
-In most cases, the variances of errors are unknown. To perform Weighted Least Square, we need estimate the variances of errors first, which is the squared residual of $i$ sample:
+In most cases, the variances of errors are unknown. To perform Weighted Least Square, we need estimate the variances of errors first, which is the squared residual of $i$th sample:
 
 ```math
 \widehat{\mathbf{Var}(\epsilon_i)} = \widehat{\mathbf{E}(\epsilon_i \epsilon_i)} = r_i(\boldsymbol{\gamma}^*)
 ```
 
-Using unweighted fitting (OLS) to get the residuals, since the estimator of OLS is unbiased. Then pass the reciprocal of the residuals as the estimated optimal weight and perform Weighted Least Squares.
+Unweighted fitting (OLS) will return the residuals we need, since the estimator of OLS is unbiased. Then pass the reciprocal of the residuals as the estimated optimal weight to perform Weighted Least Squares:
 
 ```Julia
 julia> fit_OLS = curve_fit(m, tdata, ydata, p0)
-julia> wt = 1 ./ fit_OLS.residual
+julia> wt = 1 ./ fit_OLS.resid
 julia> fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
 julia> cov = estimate_covar(fit_WLS)
 ```
