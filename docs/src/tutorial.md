@@ -230,9 +230,10 @@ julia> confidence_intervals = confidence_interval(fit, 0.1)
 ```
 
 ## Weighted Least Squares
+
 `curve_fit()` also accepts weight parameter to perform Weighted Least Squares, where the parameter $\boldsymbol{\gamma}^*$ minimizes the weighted residual sum of squares.
 
-Weight parameter (`w`) is a vector or a diagonal matrix of weights for each sample.
+Weight parameter (`wt`) is a vector or a matrix of weights for each sample.
 
 ```math
 \mathbf{W} = \begin{pmatrix}
@@ -268,7 +269,7 @@ is a residual vector function with entries:
 r_i({\boldsymbol{\gamma}}) = m(\mathbf{x_i}, {\boldsymbol{\gamma}}) - Y_i
 ```
 
-The algorithm will provide a least squares solution $\boldsymbol{\gamma}^*$, which is the same as the unweighted least squears solution because the partial derivatives are all zero in both cases. Set $r({\boldsymbol{\gamma^*}}) = r$ and $J(\boldsymbol{\gamma^*}) = J$. The linear approximation of the weighted least squares problem is then:
+The algorithm will provide a least squares solution $\boldsymbol{\gamma}^*$. Set $r({\boldsymbol{\gamma^*}}) = r$ and $J(\boldsymbol{\gamma^*}) = J$, the linear approximation of the weighted least squares problem is then:
 
 ```math
 \underset{\boldsymbol{\gamma}}{\mathrm{min}} \quad s(\boldsymbol{\gamma}) = s(\boldsymbol{\gamma}^* + \boldsymbol{h}) \approx [J\boldsymbol{h}+r]'W[J\boldsymbol{h}+r]
@@ -292,7 +293,7 @@ Assume the errors in each sample are independent, normal distributed with differ
 \mathbf{Cov}(\boldsymbol{\gamma}^*) = [J'WJ]^{-1}
 ```
 
-If we only know the ratio of different variances, i.e. $\epsilon \sim N(0, \sigma^2W^{-1})$, the covariance matrix will be:
+If we only know **the ratio** of different variances, i.e. $\epsilon \sim N(0, \sigma^2W^{-1})$, the covariance matrix will be:
 
 ```math
 \mathbf{Cov}(\boldsymbol{\gamma}^*) = \sigma^2[J'WJ]^{-1}
@@ -300,16 +301,19 @@ If we only know the ratio of different variances, i.e. $\epsilon \sim N(0, \sigm
 
 where $\sigma^2$ is estimated. In this case, if we set $W = I$, the result will be the same as the unweighted version.
 
-Currently, `curve_fit()` only supports the inverse of variances as the weight, i.e. the covariance of parameter is calculated as `covar = inv(J'*fit.wt*J)`. Pass the vector or the matrix weight parameter (`w`) which is the inverse of variances to the function:
+Currently, `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of estimated parameter is calculated as `covar = inv(J'*fit.wt*J)`. Pass the vector of `1 ./ var(ε)` or the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function:
 
 ```Julia
 julia> wt = 1 ./ yvar
 julia> fit = curve_fit(m, tdata, ydata, wt, p0)
 julia> cov = estimate_covar(f)
 ```
-
+!!! note
+    If the weight matrix is not a diagonal matrix, then General Least Squares is performed.
 
 ## References
 Hansen, P. C., Pereyra, V. and Scherer, G. (2013) Least squares data fitting with applications. Baltimore, Md: Johns Hopkins University Press, p. 147-155.
 
 Kutner, M. H. et al. (2005) Applied Linear statistical models.
+
+Weisberg, S. (2014) Applied linear regression. Fourth edition. Hoboken, NJ: Wiley (Wiley series in probability and statistics).
