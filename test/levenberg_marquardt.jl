@@ -1,4 +1,4 @@
-let
+@testset "optimization" begin
     function f_lm(x)
       [x[1], 2.0 - x[2]]
     end
