@@ -82,24 +82,28 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
-    # construct a weighted cost function, with a vector weight for each ydata
-    # for example, this might be wt = 1/sigma where sigma is some error term
-    f(p) = wt .* ( model(xpts, p) - ydata )
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
+    # use `sigma` to construct a weighted cost function,
+    # where `sigma` is a vector of the standard deviations of error, i.e. ϵ_i ~ N(0, σ_i^2)
+    sqrt_wt = 1 ./ sigma
+    wt = sqrt_wt.^2
+    f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
-    f(p) = wt .* ( model(xpts, p) - ydata )
-    g(p) = wt .* ( jacobian_model(xpts, p) )
+            xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
+    sqrt_wt = 1 ./ sigma
+    wt = sqrt_wt.^2
+    f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
+    g(p) = sqrt_wt .* ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
-    # as before, construct a weighted cost function with where this
-    # method uses a matrix weight.
-    # for example: an inverse_covariance matrix
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+    # use `Sigma` to construct a weighted cost function
+    # where `Sigma` is a matrix of the covariance matrix of error, i.e. ϵ ~ N(0, Σ)
+    wt = inv(Sigma)
 
     # Cholesky is effectively a sqrt of a matrix, which is what we want
     # to minimize in the least-squares of levenberg_marquardt()
@@ -111,7 +115,8 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+    wt = inv(Sigma)
     u = chol(wt)
 
     f(p) = u * ( model(xpts, p) - ydata )
