@@ -1,5 +1,4 @@
 immutable LsqFitResult{T,N}
-    # simple type container for now, but can be expanded later
     dof::Int
     param::Vector{T}
     resid::Vector{T}
