@@ -133,7 +133,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API References",
     "title": "LsqFit.curve_fit",
     "category": "function",
-    "text": "curve_fit(model, xdata, ydata, p0) -> fit\n\nFit data to a non-linear model. p0 is an initial model parameter guess (see Example). The return object is a composite type (LsqFitResult), with some interesting values:\n\nfit.dof : degrees of freedom\nfit.param : best fit parameters\nfit.resid : residuals = vector of residuals\nfit.jacobian : estimated Jacobian at solution\n\nExample\n\n# a two-parameter exponential model\n# x: array of independent variables\n# p: array of model parameters\nmodel(x, p) = p[1]*exp.(-x.*p[2])\n\n# some example data\n# xdata: independent variables\n# ydata: dependent variable\nxdata = linspace(0,10,20)\nydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))\np0 = [0.5, 0.5]\n\nfit = curve_fit(model, xdata, ydata, p0)\n\n\n\n"
+    "text": "curve_fit(model, xdata, ydata, p0) -> fit\n\nFit data to a non-linear model. p0 is an initial model parameter guess (see Example). The return object is a composite type (LsqFitResult), with some interesting values:\n\nfit.dof : degrees of freedom\nfit.param : best fit parameters\nfit.resid : residuals = vector of residuals\nfit.jacobian : estimated Jacobian at solution\n\nExample\n\n# a two-parameter exponential model\n# x: array of independent variables\n# p: array of model parameters\nmodel(x, p) = p[1]*exp.(-x.*p[2])\n\n# some example data\n# xdata: independent variables\n# ydata: dependent variable\nxdata = range(0, stop=10, length=20)\nydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))\np0 = [0.5, 0.5]\n\nfit = curve_fit(model, xdata, ydata, p0)\n\n\n\n"
 },
 
 {

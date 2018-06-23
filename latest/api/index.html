@@ -7,8 +7,8 @@ model(x, p) = p[1]*exp.(-x.*p[2])
 # some example data
 # xdata: independent variables
 # ydata: dependent variable
-xdata = linspace(0,10,20)
+xdata = range(0, stop=10, length=20)
 ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 p0 = [0.5, 0.5]
 
-fit = curve_fit(model, xdata, ydata, p0)</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaNLSolvers/LsqFit.jl/blob/d6a01b17b7804ada7956740fdb543c2e353be418/src/curve_fit.jl#L41-L67">source</a></section><footer><hr/><a class="previous" href="../tutorial/"><span class="direction">Previous</span><span class="title">Tutorial</span></a></footer></article></body></html>
+fit = curve_fit(model, xdata, ydata, p0)</code></pre></div><a class="source-link" target="_blank" href="https://github.com/JuliaNLSolvers/LsqFit.jl/blob/9b86bb16027400d97c4f54a832102d3f874d3053/src/curve_fit.jl#L41-L67">source</a></section><footer><hr/><a class="previous" href="../tutorial/"><span class="direction">Previous</span><span class="title">Tutorial</span></a></footer></article></body></html>
