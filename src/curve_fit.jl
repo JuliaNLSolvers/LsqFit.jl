@@ -39,30 +39,44 @@ end
 
 
 """
-    curve_fit(model, xdata, ydata, p0) -> fit
-Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
+    curve_fit(model, [jacobian], x, y, [sigma,] p0; kwargs...)
+
+Fit data to a non-linear `model` by minimizing the (weighted) residual between the model and the dependent variable data (`y`). `p0` is an initial model parameter guess.
+
+The weight (`w`) can be neglected to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point, though unweighted error estimates are handled differently from weighted error estimates even when the weights are uniform.
+
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
 * `fit.dof` : degrees of freedom
 * `fit.param` : best fit parameters
-* `fit.resid` : residuals = vector of residuals
+* `fit.resid` : vector of residuals
 * `fit.jacobian` : estimated Jacobian at solution
 
-## Example
+# Arguments
+* `model`: function that takes two arguments (x, params)
+* `jacobian`: (optional) function that returns the Jacobian matrix of `model`
+* `x`: the independent variable
+* `y`: the dependent variable that constrains `model`
+* `sigma::Vector`: (optional) the standard deviations of errors.
+* `sigma::Matrix`: (optional) the covariance matrix of errors.
+* `p0`: initial guess of the model parameters
+* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
+
+# Example
 ```julia
 # a two-parameter exponential model
-# x: array of independent variables
+# t: array of independent variables
 # p: array of model parameters
-model(x, p) = p[1]*exp.(-x.*p[2])
+julia> model(x, p) = p[1] * exp.(-p[2] * t)
 
 # some example data
-# xdata: independent variables
+# tdata: independent variables
 # ydata: dependent variable
-xdata = linspace(0,10,20)
-ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
-p0 = [0.5, 0.5]
+julia> tdata = linspace(0,10,20)
+julia> ydata = model(tdata, [1.0 2.0]) + 0.01*randn(length(tdata))
+julia> p0 = [0.5, 0.5]
 
-fit = curve_fit(model, xdata, ydata, p0)
+julia> fit = curve_fit(model, tdata, ydata, p0)
 ```
 """
 function curve_fit end
@@ -85,10 +99,10 @@ end
 """
     curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
 
-use `sigma` to construct a weighted cost function to perform Weighted Least Squares, where `sigma` is a vector of the standard deviations of error, i.e. ϵ_i ~ N(0, σ_i^2), which could be estimated as `abs(fit.resid)`.
+use `sigma` to construct a weighted cost function to perform Weighted Least Squares, where `sigma` is a vector of the standard deviations of errors, i.e. ϵ_i ~ N(0, σ_i^2), which could be estimated as `abs(fit.resid)`.
 """
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
-    warn("The `weight` argument has been deprecated. Please make sure that you're passing the vector of error's standard deviations, which could be estimated as `abs(fit.resid)`.")
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the vector of the standard deviations of errors, which could be estimated by `abs(fit.resid)`.")
     sqrt_wt = 1 ./ sigma
     wt = sqrt_wt.^2
     f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
@@ -97,7 +111,7 @@ end
 
 function curve_fit(model::Function, jacobian_model::Function,
                    xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
-    warn("The `weight` argument has been deprecated. Please make sure that you're passing the standard deviation vector of the error, which could be estimated by `abs(fit.resid)`.")
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the vector of the standard deviations of errors, which could be estimated by `abs(fit.resid)`.")
     sqrt_wt = 1 ./ sigma
     wt = sqrt_wt.^2
     f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
@@ -106,13 +120,13 @@ function curve_fit(model::Function, jacobian_model::Function,
 end
 
 """
-    function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+    function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Matrix, p0; kwargs...)
 
-use `Sigma` to construct a transformed cost function to perform General Least Squares, where `Sigma` is a matrix of the covariance matrix of error, i.e. ϵ ~ N(0, Σ).
+use `sigma` to construct a transformed cost function to perform General Least Squares, where `sigma` is a matrix of the covariance matrix of error, i.e. ϵ ~ N(0, Σ).
 """
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
-    warn("The `weight` argument has been deprecated. Please make sure that you're passing the standard deviation vector of the error, which could be estimated by `abs(fit.resid)`.")
-    wt = inv(Sigma)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Matrix, p0; kwargs...)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the covariance matrix of errors.")
+    wt = inv(sigma)
     # Cholesky is effectively a sqrt of a matrix, which is what we want
     # to minimize in the least-squares of levenberg_marquardt()
     # This requires the matrix to be positive definite
@@ -122,9 +136,9 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, S
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-                   xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
-    warn("The `weight` argument has been deprecated. Please make sure that you're passing the covariance matrix of the error.")
-    wt = inv(Sigma)
+                   xpts::AbstractArray, ydata::AbstractArray, sigma::Matrix, p0; kwargs...)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the covariance matrix of errors.")
+    wt = inv(sigma)
     u = chol(wt)
     f(p) = u * ( model(xpts, p) - ydata )
     g(p) = u * ( jacobian_model(xpts, p) )

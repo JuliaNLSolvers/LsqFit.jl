@@ -30,10 +30,10 @@ let
     @test jacobian_fit.converged
 
     # some example data
-    yvars = 1e-6*rand(length(xdata))
-    ydata = model(xdata, [1.0, 2.0]) + @compat sqrt.(yvars) .* randn(length(xdata))
+    ystdd = 1e-6*rand(length(xdata))
+    ydata = model(xdata, [1.0, 2.0]) + ystdd .* randn(length(xdata))
 
-    fit = curve_fit(model, xdata, ydata, yvars, [0.5, 0.5])
+    fit = curve_fit(model, xdata, ydata, ystdd, [0.5, 0.5])
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
@@ -43,8 +43,8 @@ let
     println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
     @assert norm(errors - [0.017, 0.075]) < 0.1
 
-    # test with user-supplied jacobian and weights
-    fit = curve_fit(model, jacobian_model, xdata, ydata, yvars, [0.5, 0.5])
+    # test with user-supplied jacobian and covariance matrix
+    fit = curve_fit(model, jacobian_model, xdata, ydata, diagm(ystdd.^2), [0.5, 0.5])
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
