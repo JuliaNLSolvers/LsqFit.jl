@@ -41,9 +41,7 @@ end
 """
     curve_fit(model, [jacobian], x, y, [sigma,] p0; kwargs...)
 
-Fit data to a non-linear `model` by minimizing the (weighted) residual between the model and the dependent variable data (`y`). `p0` is an initial model parameter guess.
-
-The weight (`w`) can be neglected to perform an unweighted fit. An unweighted fit is the numerical equivalent of `w=1` for each point, though unweighted error estimates are handled differently from weighted error estimates even when the weights are uniform.
+Fit data to a non-linear `model` by minimizing the (transformed) residual between the model and the dependent variable data (`y`). `p0` is an initial model parameter guess.
 
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
@@ -57,8 +55,8 @@ The return object is a composite type (`LsqFitResult`), with some interesting va
 * `jacobian`: (optional) function that returns the Jacobian matrix of `model`
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
-* `sigma::Vector`: (optional) the standard deviations of errors.
-* `sigma::Matrix`: (optional) the covariance matrix of errors.
+* `sigma::Vector`: (optional) the standard deviations of errors to perform Weighted Least Squares.
+* `sigma::Matrix`: (optional) the covariance matrix of errors to perform General Least Squares.
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
 
