@@ -85,14 +85,14 @@ end
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
-    f(p) = wt .* ( model(xpts, p) - ydata )
+    f(p) = sqrt.(wt) .* ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
             xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
-    f(p) = wt .* ( model(xpts, p) - ydata )
-    g(p) = wt .* ( jacobian_model(xpts, p) )
+    f(p) = sqrt.(wt) .* ( model(xpts, p) - ydata )
+    g(p) = sqrt.(wt) .* ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
