@@ -75,16 +75,20 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
+                   xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
     f(p) = model(xpts, p) - ydata
     g(p) = jacobian_model(xpts, p)
     T = eltype(ydata)
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
+"""
+    curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
+
+use `sigma` to construct a weighted cost function to perform Weighted Least Squares, where `sigma` is a vector of the standard deviations of error, i.e. ϵ_i ~ N(0, σ_i^2), which could be estimated as `abs(fit.resid)`.
+"""
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
-    # use `sigma` to construct a weighted cost function,
-    # where `sigma` is a vector of the standard deviations of error, i.e. ϵ_i ~ N(0, σ_i^2)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the vector of error's standard deviations, which could be estimated as `abs(fit.resid)`.")
     sqrt_wt = 1 ./ sigma
     wt = sqrt_wt.^2
     f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
@@ -92,7 +96,8 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, s
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
+                   xpts::AbstractArray, ydata::AbstractArray, sigma::Vector, p0; kwargs...)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the standard deviation vector of the error, which could be estimated by `abs(fit.resid)`.")
     sqrt_wt = 1 ./ sigma
     wt = sqrt_wt.^2
     f(p) = sqrt_wt .* ( model(xpts, p) - ydata )
@@ -100,25 +105,27 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
-    # use `Sigma` to construct a weighted cost function
-    # where `Sigma` is a matrix of the covariance matrix of error, i.e. ϵ ~ N(0, Σ)
-    wt = inv(Sigma)
+"""
+    function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
 
+use `Sigma` to construct a transformed cost function to perform General Least Squares, where `Sigma` is a matrix of the covariance matrix of error, i.e. ϵ ~ N(0, Σ).
+"""
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the standard deviation vector of the error, which could be estimated by `abs(fit.resid)`.")
+    wt = inv(Sigma)
     # Cholesky is effectively a sqrt of a matrix, which is what we want
     # to minimize in the least-squares of levenberg_marquardt()
     # This requires the matrix to be positive definite
     u = chol(wt)
-
     f(p) = u * ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+                   xpts::AbstractArray, ydata::AbstractArray, Sigma::Matrix, p0; kwargs...)
+    warn("The `weight` argument has been deprecated. Please make sure that you're passing the covariance matrix of the error.")
     wt = inv(Sigma)
     u = chol(wt)
-
     f(p) = u * ( model(xpts, p) - ydata )
     g(p) = u * ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
