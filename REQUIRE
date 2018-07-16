@@ -1,5 +1,4 @@
 julia 0.7-alpha
 Calculus
 Distributions
-Compat 0.32.0
 OptimBase

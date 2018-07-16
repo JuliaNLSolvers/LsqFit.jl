@@ -8,8 +8,8 @@ module LsqFit
 
     using Calculus
     using Distributions
-    using Compat
     using OptimBase
+    using LinearAlgebra
 
     import Base.summary
 
