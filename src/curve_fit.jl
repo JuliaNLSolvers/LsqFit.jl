@@ -1,4 +1,4 @@
-immutable LsqFitResult{T,N}
+struct LsqFitResult{T,N}
     dof::Int
     param::Vector{T}
     resid::Vector{T}
