@@ -5,7 +5,7 @@ let
 
     # some example data
     srand(12345)
-    xdata = linspace(0,10,20)
+    xdata = range(0, stop=10, length=20)
     ydata = model(xdata, [1.0, 2.0]) + 0.01*randn(length(xdata))
     p0 = [0.5, 0.5]
 
@@ -20,7 +20,7 @@ let
     # if your model is differentiable, it can be faster and/or more accurate
     # to supply your own jacobian instead of using the finite difference
     function jacobian_model(x,p)
-        J = Array{Float64}(length(x),length(p))
+        J = Array{Float64}(undef, length(x), length(p))
         J[:,1] = exp.(-x.*p[2])     #dmodel/dp[1]
         J[:,2] = -x.*p[1].*J[:,1]           #dmodel/dp[2]
         J

@@ -2,7 +2,8 @@
 # Correctness Tests
 #
 
-using LsqFit, Base.Test, Compat
+using LsqFit, Test, LinearAlgebra, Random
+using OptimBase, Calculus
 
 my_tests = [ "curve_fit.jl", "levenberg_marquardt.jl"]
 

@@ -26,7 +26,7 @@ For illustration purpose, we generate some fake data.
 ```julia
 julia> # tdata: data of independent variable
 julia> # ydata: data of dependent variable
-julia> tdata = linspace(0,10,20)
+julia> tdata = range(0, stop=10, length=20)
 julia> ydata = model(tdata, [1.0 2.0]) + 0.01*randn(length(tdata))
 ```
 

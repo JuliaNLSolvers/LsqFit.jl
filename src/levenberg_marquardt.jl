@@ -1,4 +1,4 @@
-immutable LevenbergMarquardt <: Optimizer end
+struct LevenbergMarquardt <: Optimizer end
 Base.summary(::LevenbergMarquardt) = "Levenberg-Marquardt"
 """
     `levenberg_marquardt(f, g, initial_x; <keyword arguments>`
@@ -25,12 +25,12 @@ Comp & Applied Math).
 * `show_trace::Bool=false`: print a status summary on each iteration if true
 * `lower,upper=[]`: bound solution to these limits
 """
-function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVector{T};
+function levenberg_marquardt(f::Function, g::Function, initial_x::AbstractVector{T};
     tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 100,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
-    show_trace::Bool = false, lower::Vector{T} = Array{T}(0), upper::Vector{T} = Array{T}(0)
-    )
+    show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
+    ) where T
 
 
     # check parameters
@@ -65,8 +65,8 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
 
     # Create buffers
     n = length(x)
-    JJ = Matrix{T}(n, n)
-    n_buffer = Vector{T}(n)
+    JJ = Matrix{T}(undef, n, n)
+    n_buffer = Vector{T}(undef, n)
 
     # Maintain a trace of the system.
     tr = OptimizationTrace{LevenbergMarquardt}()
@@ -91,19 +91,19 @@ function levenberg_marquardt{T}(f::Function, g::Function, initial_x::AbstractVec
         # Where we have used the equivalence: diagm(J'*J) = diagm(sum(abs2, J,1))
         # It is additionally useful to bound the elements of DtD below to help
         # prevent "parameter evaporation".
-        DtD = vec(sum(abs2, J, 1))
+        DtD = vec(sum(abs2, J, dims=1))
         for i in 1:length(DtD)
             if DtD[i] <= MIN_DIAGONAL
                 DtD[i] = MIN_DIAGONAL
             end
         end
         # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*fcur )
-        At_mul_B!(JJ, J, J)
+        mul!(JJ, transpose(J), J)
         @simd for i in 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
-        At_mul_B!(n_buffer, J, fcur)
-        scale!(n_buffer, -1)
+        mul!(n_buffer, transpose(J), fcur)
+        rmul!(n_buffer, -1)
         delta_x = JJ \ n_buffer
 
         # apply box constraints
