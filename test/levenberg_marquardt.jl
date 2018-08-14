@@ -48,7 +48,7 @@
 
     # tests for #178, taken from LsqFit.jl, but stripped
     let
-        srand(12345)
+        Random.seed!(12345)
 
         # TODO: Change to `.-x` when 0.5 support is dropped
         model(x, p) = p[1] .* exp.(-x .* p[2])
@@ -64,7 +64,7 @@
     end
 
     let
-        srand(12345)
+        Random.seed!(12345)
 
         # TODO: Change to `.-x` when 0.5 support is dropped
         model(x, p) = p[1] .* exp.(-x ./ p[2]) .+ p[3]
