@@ -7,5 +7,5 @@ notifications:
     email: false
 
 after_success:
-  - julia -e 'Pkg.add("Documenter")'
+  - julia -e 'import Pkg; Pkg.add("Documenter")'
   - julia -e 'cd(Pkg.dir("LsqFit")); include(joinpath("docs", "make.jl"))'
