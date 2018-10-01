@@ -101,10 +101,6 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
     # method uses a matrix weight.
     # for example: an inverse_covariance matrix
 
-    # Cholesky is effectively a sqrt of a matrix, which is what we want
-    # to minimize in the least-squares of levenberg_marquardt()
-    # This requires the matrix to be positive definite
-
     f(p) = wt * ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
