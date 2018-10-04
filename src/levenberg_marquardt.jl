@@ -26,7 +26,7 @@ Comp & Applied Math).
 * `lower,upper=[]`: bound solution to these limits
 """
 function levenberg_marquardt(f::Function, g::Function, initial_x::AbstractVector{T};
-    tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 100,
+    tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
     show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
