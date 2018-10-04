@@ -138,10 +138,8 @@ function estimate_covar(fit::LsqFitResult)
         Q,R = qr(J)
         Rinv = inv(R)
         covar = Rinv*Rinv'*mse
-    elseif length(size(fit.wt)) == 1
-        covar = inv(J'*Diagonal(fit.wt)*J)
     else
-        covar = inv(J'*fit.wt*J)
+        covar = inv(J'*J)
     end
 
     return covar
