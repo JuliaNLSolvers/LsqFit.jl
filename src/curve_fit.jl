@@ -7,6 +7,15 @@ struct LsqFitResult{T,N}
     wt::Array{T,N}
 end
 
+"""
+    rss(lft)
+
+Compute residual sum of squares. If the weights were provided,
+it is calculated based on the weighted residual.
+"""
+
+rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
+
 # provide a method for those who have their own Jacobian function
 function lmfit(f::Function, g::Function, p0, wt; kwargs...)
     results = levenberg_marquardt(f, g, p0; kwargs...)
