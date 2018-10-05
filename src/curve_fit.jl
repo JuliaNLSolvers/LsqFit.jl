@@ -1,10 +1,10 @@
-struct LsqFitResult{T,N}
+struct LsqFitResult{T, Tw <: AbstractArray}
     dof::Int
     param::Vector{T}
     resid::Vector{T}
     jacobian::Matrix{T}
     converged::Bool
-    wt::Array{T,N}
+    wt::Tw
 end
 
 """
@@ -91,21 +91,26 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
-    f(p) = wt .* ( model(xpts, p) - ydata )
+    u = sqrt.(wt) # to be consistant with the matrix form
+
+    f(p) = u .* ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
-    f(p) = wt .* ( model(xpts, p) - ydata )
-    g(p) = wt .* ( jacobian_model(xpts, p) )
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
+
+    u = sqrt.(wt) # to be consistant with the matrix form
+
+    f(p) = u .* ( model(xpts, p) - ydata )
+    g(p) = u .* ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
     # for example: an inverse_covariance matrix
@@ -113,18 +118,18 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
     # Cholesky is effectively a sqrt of a matrix, which is what we want
     # to minimize in the least-squares of levenberg_marquardt()
     # This requires the matrix to be positive definite
-    u = chol(wt)
+    u = cholesky(wt).U
 
     f(p) = u * ( model(xpts, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
-    u = chol(wt)
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+    u = cholesky(wt).U
 
-    f(p) = u * ( model(xpts, p) - ydata )
-    g(p) = u * ( jacobian_model(xpts, p) )
+    f(p) = wt * ( model(xpts, p) - ydata )
+    g(p) = wt * ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
@@ -142,10 +147,8 @@ function estimate_covar(fit::LsqFitResult)
         Q,R = qr(J)
         Rinv = inv(R)
         covar = Rinv*Rinv'*mse
-    elseif length(size(fit.wt)) == 1
-        covar = inv(J'*Diagonal(fit.wt)*J)
     else
-        covar = inv(J'*fit.wt*J)
+        covar = inv(J'*J)
     end
 
     return covar
