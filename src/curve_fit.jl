@@ -1,4 +1,4 @@
-struct LsqFitResult{T,Tw <: AbstractArray{T,N}}
+struct LsqFitResult{T, Tw <: AbstractArray}
     dof::Int
     param::Vector{T}
     resid::Vector{T}
