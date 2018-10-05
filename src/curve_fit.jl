@@ -1,10 +1,10 @@
-struct LsqFitResult{T,N}
+struct LsqFitResult{T,Tw <: AbstractArray{T,N}}
     dof::Int
     param::Vector{T}
     resid::Vector{T}
     jacobian::Matrix{T}
     converged::Bool
-    wt::Array{T,N}
+    wt::Tw
 end
 
 # provide a method for those who have their own Jacobian function
@@ -82,7 +82,7 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -92,7 +92,7 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Vector, p0; kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
 
     u = sqrt.(wt) # to be consistant with the matrix form
 
@@ -101,7 +101,7 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
     # for example: an inverse_covariance matrix
@@ -116,7 +116,7 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::Matrix, p0; kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     u = cholesky(wt).U
 
     f(p) = wt * ( model(xpts, p) - ydata )
