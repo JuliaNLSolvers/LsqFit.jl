@@ -19,7 +19,12 @@ using LsqFit
 # a two-parameter exponential model
 # x: array of independent variables
 # p: array of model parameters
-model(x, p) = p[1]*exp.(-x.*p[2])
+# model(x, p) will accept the full data set as the first argument `x`.
+# This means that we need to write our model function so it applies
+# the model to the full dataset. We use `@.` to apply the calculations
+# across all rows.
+@. model(x, p) = p[1]*exp(-x*p[2])
+
 
 # some example data
 # xdata: independent variables
