@@ -1,10 +1,9 @@
-struct LsqFitResult{T, Tw <: AbstractArray}
-    dof::Int
-    param::Vector{T}
-    resid::Vector{T}
-    jacobian::Matrix{T}
+struct LsqFitResult{P, R, J, W <: AbstractArray}
+    param::P
+    resid::R
+    jacobian::J
     converged::Bool
-    wt::Tw
+    wt::W
 end
 
 """
@@ -14,15 +13,17 @@ Compute residual sum of squares. If the weights were provided,
 it is calculated based on the weighted residual.
 """
 
-rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
+StatsBase.coef(lfr::LsqFitResult) = lfr.param
+StatsBase.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
+StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
+StatsBase.rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f::Function, g::Function, p0, wt; kwargs...)
     results = levenberg_marquardt(f, g, p0; kwargs...)
     p = minimizer(results)
     resid = f(p)
-    dof = length(resid) - length(p)
-    return LsqFitResult(dof, p, f(p), g(p), converged(results), wt)
+    return LsqFitResult(p, f(p), g(p), converged(results), wt)
 end
 
 function lmfit(f::Function, p0, wt; kwargs...)
@@ -52,10 +53,13 @@ end
 Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
-* `fit.dof` : degrees of freedom
-* `fit.param` : best fit parameters
 * `fit.resid` : residuals = vector of residuals
 * `fit.jacobian` : estimated Jacobian at solution
+
+additionally, it is possible to quiry the degrees of freedom with
+
+* `dof(fit)`
+* `coef(fit)`
 
 ## Example
 ```julia
@@ -141,7 +145,7 @@ function estimate_covar(fit::LsqFitResult)
         r = fit.resid
 
         # mean square error is: standard sum square error / degrees of freedom
-        mse = sum(abs2, r) / fit.dof
+        mse = sum(abs2, r) / dof(fit)
 
         # compute the covariance matrix from the QR decomposition
         Q,R = qr(J)
@@ -176,7 +180,7 @@ function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     std_errors = standard_error(fit; rtol=rtol, atol=atol)
-    dist = TDist(fit.dof)
+    dist = TDist(dof(fit))
     critical_values = quantile(dist, 1 - alpha/2)
     # scale standard errors by quantile of the student-t distribution (critical values)
     return std_errors * critical_values
@@ -190,7 +194,7 @@ function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     std_errors = standard_error(fit; rtol=rtol, atol=atol)
     margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
-    confidence_intervals = collect(zip(fit.param-margin_of_errors, fit.param+margin_of_errors))
+    confidence_intervals = collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
 
 @deprecate estimate_errors(fit::LsqFitResult, confidence=0.95; rtol::Real=NaN, atol::Real=0) margin_error(fit, 1-confidence; rtol=rtol, atol=atol)

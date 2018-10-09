@@ -4,12 +4,16 @@ module LsqFit
            standard_error,
            margin_error,
            confidence_interval,
-           estimate_covar
+           estimate_covar,
+           dof,
+           coef
 
     using Calculus
     using Distributions
     using OptimBase
     using LinearAlgebra
+    import StatsBase
+    import StatsBase: dof, coef, nobs
 
     import Base.summary
 
