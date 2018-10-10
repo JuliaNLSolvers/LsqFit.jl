@@ -19,14 +19,13 @@ StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
 StatsBase.rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
 
 # provide a method for those who have their own Jacobian function
-function lmfit(f::Function, g::Function, p0, wt; kwargs...)
-    results = levenberg_marquardt(f, g, p0; kwargs...)
-    p = minimizer(results)
-    resid = f(p)
-    return LsqFitResult(p, f(p), g(p), converged(results), wt)
+function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
+    r = f(p0)
+    R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
+    lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(f::Function, p0, wt; kwargs...)
+function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
@@ -43,10 +42,16 @@ function lmfit(f::Function, p0, wt; kwargs...)
     #   g(p) : estimated Jacobian at p (Jacobian with respect to p)
 
     # construct Jacobian function, which uses finite difference method
-    g = Calculus.jacobian(f)
-    lmfit(f, g, p0, wt; kwargs...)
+    r = f(p0)
+    R = OnceDifferentiable(f, p0, similar(r); inplace = false, autodiff = autodiff)
+    lmfit(R, p0, wt; kwargs...)
 end
 
+function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, kwargs...)
+    results = levenberg_marquardt(R, p0; kwargs...)
+    p = minimizer(results)
+    return LsqFitResult(p, value(R, p), jacobian(R, p), converged(results), wt)
+end
 
 """
     curve_fit(model, xdata, ydata, p0) -> fit
