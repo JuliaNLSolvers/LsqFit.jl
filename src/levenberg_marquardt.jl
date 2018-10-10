@@ -14,8 +14,8 @@ Implements box constraints as described in Kanzow, Yamashita, Fukushima (2004; J
 Comp & Applied Math).
 
 # Keyword arguments
-* `tolX::Real=1e-8`: search tolerance in x
-* `tolG::Real=1e-12`: search tolerance in gradient
+* `x_tol::Real=1e-8`: search tolerance in x
+* `g_tol::Real=1e-12`: search tolerance in gradient
 * `maxIter::Integer=100`: maximum number of iterations
 * `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
 * `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
@@ -26,7 +26,7 @@ Comp & Applied Math).
 * `lower,upper=[]`: bound solution to these limits
 """
 function levenberg_marquardt(f::Function, g::Function, initial_x::AbstractVector{T};
-    tolX::Real = 1e-8, tolG::Real = 1e-12, maxIter::Integer = 1000,
+    x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
     show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
@@ -152,11 +152,11 @@ function levenberg_marquardt(f::Function, g::Function, initial_x::AbstractVector
         end
 
         # check convergence criteria:
-        # 1. Small gradient: norm(J^T * fcur, Inf) < tolG
-        # 2. Small step size: norm(delta_x) < tolX
-        if norm(J' * fcur, Inf) < tolG
+        # 1. Small gradient: norm(J^T * fcur, Inf) < g_tol
+        # 2. Small step size: norm(delta_x) < x_tol
+        if norm(J' * fcur, Inf) < g_tol
             g_converged = true
-        elseif norm(delta_x) < tolX*(tolX + norm(x))
+        elseif norm(delta_x) < x_tol*(x_tol + norm(x))
             x_converged = true
         end
         converged = g_converged | x_converged
@@ -176,7 +176,7 @@ function levenberg_marquardt(f::Function, g::Function, initial_x::AbstractVector
         0.0,                   # f_tol
         0.0,
         g_converged,           # g_converged
-        tolG,                  # g_tol
+        g_tol,                  # g_tol
         0.0,
         false,                 # f_increased
         tr,                    # trace
