@@ -8,10 +8,10 @@ module LsqFit
            dof,
            coef
 
-    using Calculus
     using Distributions
     using OptimBase
     using LinearAlgebra
+    import NLSolversBase: value, jacobian
     import StatsBase
     import StatsBase: dof, coef, nobs
 
