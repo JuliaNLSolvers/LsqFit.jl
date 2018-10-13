@@ -6,17 +6,13 @@ struct LsqFitResult{P, R, J, W <: AbstractArray}
     wt::W
 end
 
-"""
-    rss(lft)
-
-Compute residual sum of squares. If the weights were provided,
-it is calculated based on the weighted residual.
-"""
 
 StatsBase.coef(lfr::LsqFitResult) = lfr.param
 StatsBase.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
 StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
 StatsBase.rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
+StatsBase.weights(lfr::LsqFitResult) = lfr.wt
+StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
@@ -153,7 +149,7 @@ function estimate_covar(fit::LsqFitResult)
         mse = sum(abs2, r) / dof(fit)
 
         # compute the covariance matrix from the QR decomposition
-        Q,R = qr(J)
+        Q, R = qr(J)
         Rinv = inv(R)
         covar = Rinv*Rinv'*mse
     else
@@ -163,7 +159,7 @@ function estimate_covar(fit::LsqFitResult)
     return covar
 end
 
-function standard_error(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function StatsBase.stderr(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
@@ -184,7 +180,7 @@ function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = standard_error(fit; rtol=rtol, atol=atol)
+    std_errors = stderr(fit; rtol=rtol, atol=atol)
     dist = TDist(dof(fit))
     critical_values = quantile(dist, 1 - alpha/2)
     # scale standard errors by quantile of the student-t distribution (critical values)
@@ -197,9 +193,10 @@ function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = standard_error(fit; rtol=rtol, atol=atol)
+    std_errors = stderr(fit; rtol=rtol, atol=atol)
     margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
     confidence_intervals = collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
 
+@deprecate standard_errors(args...; kwargs...) stderr(args...; kwargs...)
 @deprecate estimate_errors(fit::LsqFitResult, confidence=0.95; rtol::Real=NaN, atol::Real=0) margin_error(fit, 1-confidence; rtol=rtol, atol=atol)

@@ -5,15 +5,16 @@ module LsqFit
            margin_error,
            confidence_interval,
            estimate_covar,
-           dof,
-           coef
+           # StatsBase reexports
+           dof, coef, nobs,
+           stderr, weights, residuals
 
     using Distributions
     using OptimBase
     using LinearAlgebra
     import NLSolversBase: value, jacobian
     import StatsBase
-    import StatsBase: dof, coef, nobs
+    import StatsBase: coef, dof, nobs, rss, stderr, weights, residuals
 
     import Base.summary
 
