@@ -1,4 +1,4 @@
-Optim.jl is licensed under the MIT License:
+LsqFit.jl is licensed under the MIT License:
 
 > Copyright (c) 2012: John Myles White and other contributors.
 > 
