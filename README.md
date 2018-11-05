@@ -31,19 +31,22 @@ using LsqFit
 # ydata: dependent variable
 xdata = range(0, stop=10, length=20)
 ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
-
-# starting guess and upper and lower bounds for the free parameters
 p0 = [0.5, 0.5]
-lb = [1.1, -0.5]
-ub = [1.9, Inf]
 
-fit = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
+fit = curve_fit(model, xdata, ydata, p0)
 # fit is a composite type (LsqFitResult), with some interesting values:
 #	dof(fit): degrees of freedom
 #	coef(fit): best fit parameters
 #	fit.resid: residuals = vector of residuals
 #	fit.jacobian: estimated Jacobian at solution
-@assert all(lb .<= fit.param .<= ub)
+
+lb = [1.1, -0.5]
+ub = [1.9, Inf]
+# Optional upper and/or lower bounds on the free parameters can be passed as an argument.
+# Bounded and unbouded variables can be mixed by setting `-Inf` if no lower bounds
+# is to be enforced for that variable and similarly for `+Inf`
+fit_bounds = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
+@assert all(lb .<= fit_bounds.param .<= ub)
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
@@ -60,7 +63,7 @@ function jacobian_model(x,p)
     J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
     J
 end
-fit = curve_fit(model, jacobian_model, xdata, ydata, p0, lower=lb, upper=ub)
+fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
 ```
 
 Existing Functionality
