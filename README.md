@@ -31,14 +31,19 @@ using LsqFit
 # ydata: dependent variable
 xdata = range(0, stop=10, length=20)
 ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
-p0 = [0.5, 0.5]
 
-fit = curve_fit(model, xdata, ydata, p0)
+# starting guess and upper and lower bounds for the free parameters
+p0 = [0.5, 0.5]
+lb = [1.1, -0.5]
+ub = [1.9, Inf]
+
+fit = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
 # fit is a composite type (LsqFitResult), with some interesting values:
 #	dof(fit): degrees of freedom
 #	coef(fit): best fit parameters
 #	fit.resid: residuals = vector of residuals
 #	fit.jacobian: estimated Jacobian at solution
+@assert all(lb .<= fit.param .<= ub)
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
@@ -55,7 +60,7 @@ function jacobian_model(x,p)
     J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
     J
 end
-fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
+fit = curve_fit(model, jacobian_model, xdata, ydata, p0, lower=lb, upper=ub)
 ```
 
 Existing Functionality
@@ -69,7 +74,7 @@ Existing Functionality
 * `y`: the dependent variable that constrains `model`
 * `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
 * `p0`: initial guess of the model parameters
-* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
+* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter`, `show_trace` or `lower` and `upper` bounds
 * `fit`: composite type of results (`LsqFitResult`)
 
 
