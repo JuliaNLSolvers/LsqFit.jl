@@ -45,12 +45,12 @@ fit = curve_fit(model, xdata, ydata, p0)
 sigma = standard_error(fit)
 # to get margin of error and confidence interval of each parameter at 5% significance level:
 margin_of_error = margin_error(fit, 0.05)
-confidence_interval = confidence_interval(fit, 0.05)
+confidence_inter = confidence_interval(fit, 0.05)
 
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
 function jacobian_model(x,p)
-    J = Array{Float64}(length(x),length(p))
+    J = Array{Float64}(undef, length(x),length(p))
     J[:,1] = exp.(-x.*p[2])    #dmodel/dp[1]
     J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
     J
