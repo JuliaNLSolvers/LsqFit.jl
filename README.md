@@ -40,6 +40,13 @@ fit = curve_fit(model, xdata, ydata, p0)
 #	fit.resid: residuals = vector of residuals
 #	fit.jacobian: estimated Jacobian at solution
 
+lb = [1.1, -0.5]
+ub = [1.9, Inf]
+# Optional upper and/or lower bounds on the free parameters can be passed as an argument.
+# Bounded and unbouded variables can be mixed by setting `-Inf` if no lower bounds
+# is to be enforced for that variable and similarly for `+Inf`
+fit_bounds = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
+
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
 sigma = standard_error(fit)
@@ -69,7 +76,7 @@ Existing Functionality
 * `y`: the dependent variable that constrains `model`
 * `w`: (optional) weight applied to the residual; can be a vector (of `length(x)` size or empty) or matrix (inverse covariance matrix)
 * `p0`: initial guess of the model parameters
-* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter` or `show_trace`
+* `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter`, `show_trace` or `lower` and `upper` bounds
 * `fit`: composite type of results (`LsqFitResult`)
 
 
