@@ -46,7 +46,6 @@ ub = [1.9, Inf]
 # Bounded and unbouded variables can be mixed by setting `-Inf` if no lower bounds
 # is to be enforced for that variable and similarly for `+Inf`
 fit_bounds = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
-@assert all(lb .<= fit_bounds.param .<= ub)
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
