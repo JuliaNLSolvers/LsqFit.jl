@@ -33,8 +33,8 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     ) where T
 
     # Create residual and jacobian evaluators, should be inplace
-    f = x -> NLSolversBase.value(df, x)
-    g = x -> NLSolversBase.jacobian(df, x)
+    f = x -> value(df, x)
+    g = x -> jacobian(df, x)
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
@@ -55,7 +55,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     converged = false
     x_converged = false
     g_converged = false
-    need_jacobian = true
+
     iterCt = 0
     x = copy(initial_x)
     delta_x = copy(initial_x)
@@ -80,10 +80,13 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         println(os)
     end
 
-    local J
+    J = jacobian(df, x)
+    g_calls += 1
+    need_jacobian = false
+
     while (~converged && iterCt < maxIter)
         if need_jacobian
-            J = g(x)
+            J = jacobian(df, x)
             g_calls += 1
             need_jacobian = false
         end
@@ -165,7 +168,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         converged = g_converged | x_converged
     end
 
-    MultivariateOptimizationResults(
+    NonLinearLsqResults(
         LevenbergMarquardt(),    # method
         initial_x,             # initial_x
         x,                     # minimizer
@@ -185,6 +188,5 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         tr,                    # trace
         f_calls,               # f_calls
         g_calls,               # g_calls
-        0                      # h_calls
     )
 end
