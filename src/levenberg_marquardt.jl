@@ -33,8 +33,8 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     ) where T
 
     # Create residual and jacobian evaluators, should be inplace
-    f = x -> NLSolversBase.value(df, x)
-    g = x -> NLSolversBase.jacobian(df, x)
+    f = x -> NLSolversBase.value!(df, x)
+    g = x -> NLSolversBase.jacobian!(df, x)
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||

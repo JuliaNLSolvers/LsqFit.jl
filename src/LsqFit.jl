@@ -7,14 +7,14 @@ module LsqFit
            estimate_covar,
            # StatsBase reexports
            dof, coef, nobs, mse, rss,
-           stderr, weights, residuals
+           stderror, weights, residuals
 
     using Distributions
     using OptimBase
     using LinearAlgebra
     import NLSolversBase: value, jacobian
     import StatsBase
-    import StatsBase: coef, dof, nobs, rss, stderr, weights, residuals
+    import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
 
     import Base.summary
 
