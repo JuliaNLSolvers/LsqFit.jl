@@ -12,7 +12,7 @@ The LsqFit package is a small library that provides basic least-squares fitting 
 Basic Usage
 -----------
 
-There are top-level methods `curve_fit()` and `estimate_errors()` that are useful for fitting data to non-linear models. See the following example:
+There are top-level methods `curve_fit()` and `estimate_errors()` that are useful for fitting data to non-linear models. See the following example. Let's first define the model function:
 ```julia
 using LsqFit
 
@@ -24,15 +24,18 @@ using LsqFit
 # the model to the full dataset. We use `@.` to apply the calculations
 # across all rows.
 @. model(x, p) = p[1]*exp(-x*p[2])
-
-
+```
+The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. We simulate some data and chose our "true" parameters.
+```julia
 # some example data
 # xdata: independent variables
 # ydata: dependent variable
 xdata = range(0, stop=10, length=20)
 ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
 p0 = [0.5, 0.5]
-
+```
+Now, we're ready to fit the model.
+```julia
 fit = curve_fit(model, xdata, ydata, p0)
 # fit is a composite type (LsqFitResult), with some interesting values:
 #	dof(fit): degrees of freedom
@@ -63,6 +66,13 @@ function jacobian_model(x,p)
     J
 end
 fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
+```
+
+Multivariate regression
+-----------------------
+There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification:
+```julia
+@. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
 ```
 
 Existing Functionality
