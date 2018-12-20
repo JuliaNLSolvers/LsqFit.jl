@@ -10,9 +10,10 @@ end
 StatsBase.coef(lfr::LsqFitResult) = lfr.param
 StatsBase.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
 StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
-StatsBase.rss(lfr::LsqFitResult) = sum(lfr.resid.^2)
+StatsBase.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
 StatsBase.weights(lfr::LsqFitResult) = lfr.wt
 StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
+mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
@@ -28,9 +29,7 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     #   model(xpts, params...) = ydata + error (noise)
 
     # this minimizes f(p) using a least squares sum of squared error:
-    #   sse = sum(f(p)^2)
-    # This is currently embedded in Optim.levelberg_marquardt()
-    # which calls sum(abs2)
+    #   rss = sum(f(p)^2)
     #
     # returns p, f(p), g(p) where
     #   p    : best fit parameters
@@ -145,13 +144,10 @@ function estimate_covar(fit::LsqFitResult)
     if isempty(fit.wt)
         r = fit.resid
 
-        # mean square error is: standard sum square error / degrees of freedom
-        mse = sum(abs2, r) / dof(fit)
-
         # compute the covariance matrix from the QR decomposition
         Q, R = qr(J)
         Rinv = inv(R)
-        covar = Rinv*Rinv'*mse
+        covar = Rinv*Rinv'*mse(fit)
     else
         covar = inv(J'*J)
     end
