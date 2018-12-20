@@ -6,7 +6,7 @@ module LsqFit
            confidence_interval,
            estimate_covar,
            # StatsBase reexports
-           dof, coef, nobs,
+           dof, coef, nobs, mse, rss,
            stderr, weights, residuals
 
     using Distributions
