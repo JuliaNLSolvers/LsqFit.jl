@@ -18,6 +18,7 @@ mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
     r = f(p0)
+    autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
@@ -38,6 +39,7 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
 
     # construct Jacobian function, which uses finite difference method
     r = f(p0)
+    autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f, p0, similar(r); inplace = false, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
