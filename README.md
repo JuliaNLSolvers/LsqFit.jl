@@ -52,7 +52,7 @@ fit_bounds = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
-sigma = standard_error(fit)
+sigma = stderror(fit)
 # to get margin of error and confidence interval of each parameter at 5% significance level:
 margin_of_error = margin_error(fit, 0.05)
 confidence_inter = confidence_interval(fit, 0.05)
@@ -94,7 +94,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 
 ----
 
-`sigma = standard_error(fit; atol, rtol)`:
+`sigma = stderror(fit; atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `atol`: absolute tolerance for negativity check
