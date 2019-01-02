@@ -9,7 +9,7 @@ let
     ydata = model(xdata, [1.0, 2.0]) + 0.01*randn(length(xdata))
     p0 = [0.5, 0.5]
 
-    for ad in (:finite, :forward)
+    for ad in (:finite, :forward, :forwarddiff)
         fit = curve_fit(model, xdata, ydata, p0; autodiff = ad)
         @assert norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
