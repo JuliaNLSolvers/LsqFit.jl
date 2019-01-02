@@ -74,6 +74,12 @@ There's nothing inherently different if there are more than one variable enterin
 ```julia
 @. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
 ```
+Automatic differentiation
+-------------------------
+The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The defaul is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is also possible to use forward mode automatic differentiation as implemented in ForwardDiff.jl by using the `autodiff=:forwarddiff` keyword.
+```
+fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
+```
 
 Existing Functionality
 ----------------------
