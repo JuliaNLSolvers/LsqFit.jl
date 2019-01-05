@@ -70,34 +70,34 @@ let
 
     println("--------------\nPerformance of non-inplace")
     println("\t Evaluation function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalf(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalg(p0);
     end
 
     println("--------------\nPerformance of inplace")
     println("\t Evaluation function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalf_inplace(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalg_inplace(p0);
     end
 
     println("--------------\nPerformance of callable type")
     println("\t Evaluation function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalf_type(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,50)
+    @time for i=range(0,stop=50,step=1)
         evalg_type(p0);
     end
 
