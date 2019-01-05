@@ -16,10 +16,10 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 # provide a method for those who have their own Jacobian function
-function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
+function lmfit(f, g, p0, wt; autodiff = :finite, inplacejac = false, kwargs...)
     r = f(p0)
-    autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
+    finalf = inplacejac ? f!_from_f(f,r) : f #we need to transform f since the `inplace` requires both f and g to be inplace
+    R = OnceDifferentiable(finalf, g, p0, similar(r); inplace = inplacejac)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -44,7 +44,7 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, kwargs...)
+function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, inplacejac = false, kwargs...)
     results = levenberg_marquardt(R, p0; kwargs...)
     p = minimizer(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
@@ -90,11 +90,11 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, p0; inplacejac = false, kwargs...)
     f(p) = model(xpts, p) - ydata
-    g(p) = jacobian_model(xpts, p)
+    g = inplacejac ? (G,p) -> jacobian_model(G, xpts, p) : p -> jacobian_model(xpts, p)
     T = eltype(ydata)
-    lmfit(f, g, p0, T[]; kwargs...)
+    lmfit(f, g, p0, T[]; inplacejac = inplacejac, kwargs...)
 end
 
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
@@ -107,13 +107,14 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplacejac = false, kwargs...) where T
 
     u = sqrt.(wt) # to be consistant with the matrix form
 
     f(p) = u .* ( model(xpts, p) - ydata )
-    g(p) = u .* ( jacobian_model(xpts, p) )
-    lmfit(f, g, p0, wt; kwargs...)
+    g = inplacejac ? (G,p) -> (jacobian_model(G, xpts, p); @. G = u*G ) : p -> u .* (jacobian_model(xpts, p))
+    #g(p) = u .* ( jacobian_model(xpts, p) )
+    lmfit(f, g, p0, wt; inplacejac = inplacejac, kwargs...)
 end
 
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
@@ -194,6 +195,12 @@ function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol
     std_errors = stderror(fit; rtol=rtol, atol=atol)
     margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
     confidence_intervals = collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
+end
+
+function f!_from_f(f, F::AbstractArray) #from NLSolversBase
+    return function ff!(F, x)
+            copyto!(F, f(x))
+    end
 end
 
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
