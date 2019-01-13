@@ -44,7 +44,7 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, inplacejac = false, kwargs...)
+function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, kwargs...)
     results = levenberg_marquardt(R, p0; kwargs...)
     p = minimizer(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
@@ -195,12 +195,6 @@ function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol
     std_errors = stderror(fit; rtol=rtol, atol=atol)
     margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
     confidence_intervals = collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
-end
-
-function f!_from_f(f, F::AbstractArray) #from NLSolversBase
-    return function ff!(F, x)
-            copyto!(F, f(x))
-    end
 end
 
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
