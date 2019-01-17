@@ -6,7 +6,7 @@ Jacobian(x, p) = Jacobian(zeros(eltype(x), length(x), length(p)))
 function (lj::Jacobian)(x,p)
     J::Array{Float64,2} = lj.J
     @. J[:,1] = exp(-x*p[2])
-    @. J[:,2] = -x*p[1]*J[:,1]
+    @. @views J[:,2] = -x*p[1]*J[:,1] #views make so that we dont allocate some memory for the J[:,1] slice, it makes the results of the tests much clearer
     J
 end
 function f!_from_f(f, F::AbstractArray)
@@ -19,6 +19,7 @@ let
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
     model(x, p) = @. p[1] * exp(-x * p[2])
+    model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
     # some example data
     Random.seed!(12345)
@@ -31,13 +32,13 @@ let
     function jacobian_model(x,p)
         J = Array{Float64}(undef, length(x), length(p))
         @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. J[:,2] = -x*p[1]*J[:,1]           #dmodel/dp[2]
+        @. @views J[:,2] = -x*p[1]*J[:,1] 
         J
     end
 
     function jacobian_model_inplace(J::Array{Float64,2},x,p)
         @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. J[:,2] = -x*p[1]*J[:,1]           #dmodel/dp[2]
+        @. @views J[:,2] = -x*p[1]*J[:,1] 
     end
 
     jacobian_type = Jacobian(xdata, p0)
@@ -50,7 +51,7 @@ let
     r = evalf(p0);
     j = evalg(p0);
 
-    f_inplace = f!_from_f(f,similar(ydata))
+    f_inplace = (F,p) -> (model_inplace(F, xdata, p); @. F = F - ydata)
     g_inplace = (G,p) -> jacobian_model_inplace(G, xdata, p)
     df_inplace = OnceDifferentiable(f_inplace, g_inplace, p0, similar(ydata); inplace = true);
     evalf_inplace(x) = NLSolversBase.value!!(df_inplace,x)
@@ -70,40 +71,44 @@ let
 
     println("--------------\nPerformance of non-inplace")
     println("\t Evaluation function")
-    @time for i=range(0,stop=50,step=1)
+
+    stop = 8 #8 because the tests afterwards will call the eval function 8 or 9 times, so it makes it easy to compare
+    step = 1
+
+    @time for i=range(0,stop=stop,step=step)
         evalf(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,stop=50,step=1)
+    @time for i=range(0,stop=stop,step=step)
         evalg(p0);
     end
 
     println("--------------\nPerformance of inplace")
     println("\t Evaluation function")
-    @time for i=range(0,stop=50,step=1)
+    @time for i=range(0,stop=stop,step=step)
         evalf_inplace(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,stop=50,step=1)
+    @time for i=range(0,stop=stop,step=step)
         evalg_inplace(p0);
     end
 
     println("--------------\nPerformance of callable type")
     println("\t Evaluation function")
-    @time for i=range(0,stop=50,step=1)
+    @time for i=range(0,stop=stop,step=step)
         evalf_type(p0);
     end
 
     println("\t Jacobian function")
-    @time for i=range(0,stop=50,step=1)
+    @time for i=range(0,stop=stop,step=step)
         evalg_type(p0);
     end
 
 
     curve_fit(model, jacobian_model, xdata, ydata, p0); #warmup
-    curve_fit(model, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true);
+    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true);
     curve_fit(model, (x,p)-> jacobian_type(x,p), xdata, ydata, p0);
 
     println("--------------\nPerformance of curve_fit")
@@ -113,7 +118,7 @@ let
     @test jacobian_fit.converged
 
     println("\t Inplace")
-    jacobian_fit_inplace = @time curve_fit(model, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true, maxIter=100)
+    jacobian_fit_inplace = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true, maxIter=100)
     @test jacobian_fit_inplace.converged
 
     println("\t Callable type")
@@ -128,7 +133,7 @@ let
     println("--------------\nPerformance of curve_fit with weights")
 
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]);
-    curve_fit(model, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true);
+    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, inplacef = true, maxIter=100);
     curve_fit(model, (x,p)-> jacobian_type(x,p), xdata, ydata, 1 ./ yvars, [0.5, 0.5]);
 
     println("\t Non-inplace with weights")
@@ -136,7 +141,7 @@ let
     @test fit.converged
 
     println("\t Inplace with weights")
-    fit_inplace = @time curve_fit(model, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, maxIter=100)
+    fit_inplace = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, inplacef = true, maxIter=100)
     @test fit_inplace.converged
 
     println("\t Callable type with weights")
