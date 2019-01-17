@@ -60,9 +60,9 @@ confidence_inter = confidence_interval(fit, 0.05)
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
 function jacobian_model(x,p)
-    J = Array{Float64}(undef, length(x),length(p))
-    J[:,1] = exp.(-x.*p[2])    #dmodel/dp[1]
-    J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
+    J = Array{Float64}(undef, length(x), length(p))
+    @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
+    @. @views J[:,2] = -x*p[1]*J[:,1] #dmodel/dp[2], thanks to @views we don't allocate memory for the J[:,1] slice
     J
 end
 fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
@@ -81,15 +81,17 @@ The default is to calculate the Jacobian using a central finite differences sche
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
 
-Inplace jacobian
+Inplace model and/or jacobian 
 -------------------------
-It is possible to use an inplace jacobian for univariate regression. It might be pertinent to use this feature when `curve_fit` is slow, or consume a lot of memory
+It is possible to use an inplace model and/or jacobian for univariate regression. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
 ```
-function jacobian_model(J,x,p)
-    J[:,1] = exp.(-x.*p[2])    #dmodel/dp[1]
-    J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
-end
-fit = curve_fit(model, jacobian, xdata, ydata, p0; inplacejac = true)
+model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
+
+function jacobian_inplace(J::Array{Float64,2},x,p)
+        @. J[:,1] = exp(-x*p[2])     
+        @. @views J[:,2] = -x*p[1]*J[:,1] 
+    end
+fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true)
 ```
 
 Existing Functionality
