@@ -121,7 +121,7 @@ function curve_fit(model::Function, jacobian_model::Function,
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
     elseif inplacef
         f! = (F,p) -> (model(F,xpts,p); @. F = F - ydata) 
-        g! = (G,p) -> (f!_from_f(jacobian_model(xpts, p),ydata))(G,p)
+        g! = (G,p) -> (f!_from_f((p) -> jacobian_model(xpts, p),ydata))(G,p)
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
     elseif inplacejac
         f = (p) -> model(xpts, p) - ydata
@@ -159,7 +159,7 @@ function curve_fit(model::Function, jacobian_model::Function,
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     elseif inplacef
         f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
-        g! = (G,p) -> (f!_from_f(u .* jacobian_model(xpts, p),ydata))(G,p)
+        g! = (G,p) -> (f!_from_f( (p) -> u .* jacobian_model(xpts, p),ydata))(G,p)
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     elseif inplacejac
         f = (p) -> u .* ( model(xpts, p) - ydata )
