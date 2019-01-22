@@ -70,6 +70,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     n = length(x)
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
+    Jdelta_buffer = similar(fcur)
 
     # Maintain a trace of the system.
     tr = OptimizationTrace{LevenbergMarquardt}()
@@ -122,7 +123,9 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         end
 
         # if the linear assumption is valid, our new residual should be:
-        predicted_residual = sum(abs2, J*delta_x + fcur)
+        mul!(Jdelta_buffer,J,delta_x)
+        @. Jdelta_buffer = Jdelta_buffer + fcur
+        predicted_residual = sum(abs2, Jdelta_buffer)
 
         # try the step and compute its quality
         trial_f = f(x + delta_x)
