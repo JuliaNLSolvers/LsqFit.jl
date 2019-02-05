@@ -1,4 +1,4 @@
-function getvHv!(hessians,v,dir_deriv)
+function vHv!(hessians,v,dir_deriv)
     tmp = similar(v) #v shouldn't be too large in general, so I kept it here
     vt = v'
     
@@ -9,7 +9,3 @@ function getvHv!(hessians,v,dir_deriv)
     
 end 
 
-function Avv!(h!,p,v,dir_deriv,hessians)
-    h!(p,hessians)
-    getvHv!(hessians,v,dir_deriv)
-end

@@ -113,6 +113,7 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
+#geodesic
 function curve_fit(model::Function, jacobian_model::Function, avv!::Function,
             xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
 

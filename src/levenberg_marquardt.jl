@@ -191,6 +191,11 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     )
 end
 
+#I had to copy lm, just out of convinience, to get things working
+# I think a smarted way to do this *might* be to create a type similar to `OnceDifferentiable` 
+# and the like. This way we could not only merge the two functions, but also have a convinient
+# way to provide an autodiff-made acceleration when someone doesn't provide an `avv`.
+# it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
 function levenberg_marquardt(df::OnceDifferentiable, avv!::Function, initial_x::AbstractVector{T};
     x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
@@ -281,10 +286,12 @@ function levenberg_marquardt(df::OnceDifferentiable, avv!::Function, initial_x::
 
         v = JJ \ n_buffer
 
+        #GEODESIC ACCELERATION PART
         avv!(x, v, dir_deriv)
         mul!(a, transpose(J), dir_deriv)
         a = JJ \ a
         rmul!(a, -0.5)
+        #end of the GEODESIC ACCELERATION PART
             
         delta_x = v + a
         println("a:",a)
