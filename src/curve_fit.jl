@@ -24,12 +24,12 @@ function lmfit(f::Function, g::Function, p0, wt; autodiff = :finite, kwargs...)
 end
 
 #experimental geo, I let the `inplace` machinery but it isn't avilable yet
-function lmfit(f::Function, g::Function, h::Function, p0, wt; inplacejac = false, kwargs...)
+function lmfit(f::Function, g::Function, avv!::Function, p0, wt; inplacejac = false, kwargs...)
     r = f(p0)
     finalf = inplacejac ? f!_from_f(f,r) : f 
     R = OnceDifferentiable(finalf, g, p0, similar(r); inplace = inplacejac)
    
-    lmfit(R, h, p0, wt;kwargs...)
+    lmfit(R, avv!, p0, wt;kwargs...)
 end
 
 
@@ -54,8 +54,8 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, h, p0, wt; autodiff = :finite, kwargs...)
-    results = levenberg_marquardt(R, h, p0; kwargs...)
+function lmfit(R::OnceDifferentiable, avv!, p0, wt; autodiff = :finite, kwargs...)
+    results = levenberg_marquardt(R, avv!, p0; kwargs...)
     p = minimizer(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
 end
@@ -113,14 +113,14 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
-function curve_fit(model::Function, jacobian_model::Function, h!::Function,
+function curve_fit(model::Function, jacobian_model::Function, avv!::Function,
             xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
 
     T = eltype(ydata)
 
     f = (p) -> model(xpts, p) - ydata
     g = (p) -> jacobian_model(xpts, p)
-    lmfit(f, g, h!, p0, T[]; kwargs...)
+    lmfit(f, g, avv!, p0, T[]; kwargs...)
 end
 
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T

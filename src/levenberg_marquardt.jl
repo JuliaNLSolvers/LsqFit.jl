@@ -191,7 +191,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     )
 end
 
-function levenberg_marquardt(df::OnceDifferentiable, h!::Function, initial_x::AbstractVector{T};
+function levenberg_marquardt(df::OnceDifferentiable, avv!::Function, initial_x::AbstractVector{T};
     x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
@@ -238,9 +238,7 @@ function levenberg_marquardt(df::OnceDifferentiable, h!::Function, initial_x::Ab
     m = length(fcur)
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
-    Jdelta_buffer = similar(fcur)
     dir_deriv = Array{T}(undef,m)
-    hessians = Array{T}(undef, n, n, m)
 
     # Maintain a trace of the system.
     tr = OptimizationTrace{LevenbergMarquardt}()
@@ -283,7 +281,7 @@ function levenberg_marquardt(df::OnceDifferentiable, h!::Function, initial_x::Ab
 
         v = JJ \ n_buffer
 
-        Avv!(h!, x, v, dir_deriv, hessians)
+        avv!(x, v, dir_deriv)
         mul!(a, transpose(J), dir_deriv)
         a = JJ \ a
         rmul!(a, -0.5)
@@ -305,9 +303,7 @@ function levenberg_marquardt(df::OnceDifferentiable, h!::Function, initial_x::Ab
         end
 
         # if the linear assumption is valid, our new residual should be:
-        mul!(Jdelta_buffer,J,delta_x)
-        @. Jdelta_buffer = Jdelta_buffer + fcur
-        predicted_residual = sum(abs2, Jdelta_buffer)
+        predicted_residual = sum(abs2, J*delta_x + fcur)
         
   
 
