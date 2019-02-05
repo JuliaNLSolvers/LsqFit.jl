@@ -17,21 +17,25 @@ let
         J
     end
 
-    # a couple notes on the h function
-    # - "h" refers to the function, hessians to the array of hessians
-    # - we "embed/bake" xdate into function, since we care about the derivatives in "p", always evaluated at the xdata points
-    function h!(p,hessians) 
+    # a couple notes on the Avv function:
+    # - the basic idea is to see the model output as simply a collection of functions: f1...fm
+    # - then Avv return an array of size m, where each elements corresponds to
+    # v'H(p)v, with H an n*n Hessian matrix of the m-th function, with n the size of p
+    function Avv(p,v,dir_deriv)
         for i=1:length(xdata)
-            hessians[1,1,i] = 0 #Do NOT allocate H with a whole matrix: H = [a b; b c], this would take a lot of memory
-            hessians[1,2,i] = (-xdata[i] * exp(-xdata[i] * p[2]))
-            hessians[2,1,i] = (-xdata[i] * exp(-xdata[i] * p[2]))
-            hessians[2,2,i] = (xdata[i]^2 * p[1] * exp(-xdata[i] * p[2]))
+            h11 = 0
+            h12 = (-xdata[i] * exp(-xdata[i] * p[2]))
+            #h21 = h12
+            h22 = (xdata[i]^2 * p[1] * exp(-xdata[i] * p[2]))
+            v1 = v[1]
+            v2 = v[2]
+            dir_deriv[i] = h11*v1^2+2*h12*v1*v2 + h22*v2^2
         end
-    end
+    end 
 
 
     curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=1); #warmup
-    curve_fit(model, jacobian_model, h!, xdata, ydata, p0; maxIter=1);
+    curve_fit(model, jacobian_model, Avv, xdata, ydata, p0; maxIter=1);
 
     println("--------------\nPerformance of curve_fit vs geo")
 
@@ -41,7 +45,7 @@ let
 
 
     println("\t Geodesic")
-    fit_geo = @time curve_fit(model, jacobian_model, h!, xdata, ydata, p0; maxIter=100)
+    fit_geo = @time curve_fit(model, jacobian_model, Avv, xdata, ydata, p0; maxIter=100)
     @test fit_geo.converged
 
     @test maximum(fit.param-fit_geo.param) < 1e-8
