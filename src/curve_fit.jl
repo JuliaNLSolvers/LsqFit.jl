@@ -16,12 +16,22 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 # provide a method for those who have their own Jacobian function
-function lmfit(f, g, p0, wt; autodiff = :finite, kwargs...)
+function lmfit(f::Function, g::Function, p0, wt; autodiff = :finite, kwargs...)
     r = f(p0)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
+
+#experimental geo, I let the `inplace` machinery but it isn't avilable yet
+function lmfit(f::Function, g::Function, h::Function, p0, wt; inplacejac = false, kwargs...)
+    r = f(p0)
+    finalf = inplacejac ? f!_from_f(f,r) : f 
+    R = OnceDifferentiable(finalf, g, p0, similar(r); inplace = inplacejac)
+   
+    lmfit(R, h, p0, wt;kwargs...)
+end
+
 
 function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     # this is a convenience function for the curve_fit() methods
@@ -42,6 +52,12 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f, p0, similar(r); inplace = false, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
+end
+
+function lmfit(R::OnceDifferentiable, h, p0, wt; autodiff = :finite, kwargs...)
+    results = levenberg_marquardt(R, h, p0; kwargs...)
+    p = minimizer(results)
+    return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
 end
 
 function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, kwargs...)
@@ -95,6 +111,16 @@ function curve_fit(model::Function, jacobian_model::Function,
     g(p) = jacobian_model(xpts, p)
     T = eltype(ydata)
     lmfit(f, g, p0, T[]; kwargs...)
+end
+
+function curve_fit(model::Function, jacobian_model::Function, h!::Function,
+            xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
+
+    T = eltype(ydata)
+
+    f = (p) -> model(xpts, p) - ydata
+    g = (p) -> jacobian_model(xpts, p)
+    lmfit(f, g, h!, p0, T[]; kwargs...)
 end
 
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
