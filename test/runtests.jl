@@ -5,7 +5,7 @@ using LsqFit, Test, LinearAlgebra, Random
 using OptimBase, Calculus
 import NLSolversBase: OnceDifferentiable
 
-my_tests = [ "curve_fit.jl", "geodesic.jl"]
+my_tests = [ "curve_fit.jl", "levenberg_marquardt.jl", "geodesic.jl"]
 
 println("Running tests:")
 
