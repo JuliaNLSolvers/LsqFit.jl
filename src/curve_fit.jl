@@ -17,11 +17,10 @@ mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 f!_from_f(f, F::AbstractArray) = f!_from_f(f, F::AbstractArray, false)
 
-# provide a method for those who have their own Jacobian function
-function lmfit(f, g::Function, p0, wt; inplacejac = false, kwargs...)
+# provide a method for those who have their own (non inplace) Jacobian function
+function lmfit(f, g::Function, p0, wt; kwargs...)
     r = f(p0)
-    finalf = inplacejac ? f!_from_f(f,r) : f #we need to transform f since the `inplace` requires both f and g to be inplace
-    R = OnceDifferentiable(finalf, g, p0, similar(r); inplace = inplacejac)
+    R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -97,11 +96,11 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; inplacef = false, kwargs...)
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
     # construct the cost function
     T = eltype(ydata)
 
-    if inplacef
+    if inplace
         f! = (F,p)  -> (model(F,xpts,p); @. F = F - ydata)
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
@@ -111,22 +110,14 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, p0; inplacef = false, inplacejac = false, kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
 
     T = eltype(ydata)
 
-    if (inplacejac && inplacef)
+    if inplace
         f! = (F,p) -> (model(F,xpts,p); @. F = F - ydata)
         g! = (G,p)  -> jacobian_model(G, xpts, p)
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
-    elseif inplacef
-        f! = (F,p) -> (model(F,xpts,p); @. F = F - ydata) 
-        g! = (G,p) -> (f!_from_f((p) -> jacobian_model(xpts, p),ydata))(G,p)
-        lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
-    elseif inplacejac
-        f = (p) -> model(xpts, p) - ydata
-        g! = (G,p) -> jacobian_model(G, xpts, p)
-        lmfit(f, g!, p0, T[]; inplacejac = true, kwargs...)
     else 
         f = (p) -> model(xpts, p) - ydata
         g = (p) -> jacobian_model(xpts, p)
@@ -134,12 +125,12 @@ function curve_fit(model::Function, jacobian_model::Function,
     end
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplacef = false, kwargs...) where T
+function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
     
-    if inplacef
+    if inplace
         f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
     else
@@ -149,22 +140,14 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
 end
 
 function curve_fit(model::Function, jacobian_model::Function,
-            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplacef = false, inplacejac = false, kwargs...) where T
+            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
 
     u = sqrt.(wt) # to be consistant with the matrix form
 
-    if (inplacef && inplacejac)
+    if inplace
         f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
         g! = (G,p) -> (jacobian_model(G, xpts, p); @. G = u*G )
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
-    elseif inplacef
-        f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
-        g! = (G,p) -> (f!_from_f( (p) -> u .* jacobian_model(xpts, p),ydata))(G,p)
-        lmfit(f!, g!, p0, wt, ydata; kwargs...)
-    elseif inplacejac
-        f = (p) -> u .* ( model(xpts, p) - ydata )
-        g! = (G,p) -> (jacobian_model(G, xpts, p); @. G = u*G )
-        lmfit(f, g!, p0, wt; inplacejac = true, kwargs...)
     else 
         f = (p) -> u .* ( model(xpts, p) - ydata )
         g = (p) -> u .* ( jacobian_model(xpts, p) )

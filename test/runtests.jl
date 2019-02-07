@@ -1,7 +1,7 @@
 #
 # Correctness Tests
 #
-
+push!(LOAD_PATH, ".")
 using LsqFit, Test, LinearAlgebra, Random
 using OptimBase, Calculus
 import NLSolversBase: OnceDifferentiable

@@ -1,7 +1,7 @@
 let
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
-    model(x, p) = @. p[1] * exp(-x * p[2])
+    @. model(x, p) = p[1] * exp(-x * p[2])
     model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
     # some example data
@@ -71,31 +71,40 @@ let
         evalg_inplace(p0);
     end
 
-    curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=100); #warmup
-    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true, maxIter=100);
+    
+    curve_fit(model, xdata, ydata, p0; maxIter=100); #warmup
+    curve_fit(model_inplace, xdata, ydata, p0; inplace = true, maxIter=100);
+
+    #explicit jac
+    curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=100);
+    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplace = true, maxIter=100);
+
+
 
     println("--------------\nPerformance of curve_fit")
 
     println("\t Non-inplace")
-    fit = @time curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=100)
+    fit = @time curve_fit(model, xdata, ydata, p0; maxIter=100)
     @test fit.converged
 
     println("\t Inplace")
-    fit_inplace = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true, maxIter=100)
+    fit_inplace = @time curve_fit(model_inplace, xdata, ydata, p0; inplace = true, maxIter=100)
     @test fit_inplace.converged
 
-    @test fit.param == fit_inplace.param
+    @test fit_inplace.param == fit.param
 
 
-    # actually just testing
+    println("\t Non-inplace with jacobian")
+    fit_jac = @time curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=100)
+    @test fit_jac.converged
 
-    fit_model_inplace = curve_fit(model_inplace, jacobian_model, xdata, ydata, [0.5, 0.5]; inplacef = true, maxIter=100)
-    @test fit_model_inplace.converged
-    
-    fit_jac_inplace = curve_fit(model, jacobian_model_inplace, xdata, ydata, [0.5, 0.5]; inplacejac = true, maxIter=100)
-    @test fit_jac_inplace.converged
+    println("\t Inplace with jacobian")
+    fit_inplace_jac = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplace = true, maxIter=100)
+    @test fit_inplace_jac.converged
 
-    @test fit.param == fit_model_inplace.param == fit_jac_inplace.param
+    @test fit_jac.param == fit_inplace_jac.param
+
+
 
 
     # some example data
@@ -104,29 +113,32 @@ let
 
     println("--------------\nPerformance of curve_fit with weights")
 
+    curve_fit(model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]);
+    curve_fit(model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplace = true, maxIter=100);
+
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]);
-    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, inplacef = true, maxIter=100);
+    curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplace = true, maxIter=100);
+
 
     println("\t Non-inplace with weights")
     fit_wt = @time curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; maxIter=100)
     @test fit_wt.converged
 
     println("\t Inplace with weights")
-    fit_inplace_wt = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, inplacef = true, maxIter=100)
+    fit_inplace_wt = @time curve_fit(model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplace = true, maxIter=100)
     @test fit_inplace_wt.converged
 
-    @test fit_wt.param == fit_inplace_wt.param
+    @test maximum(abs.(fit_wt.param - fit_inplace_wt.param)) < 1e-15
 
 
-    # actually just testing    
-    
-    fit_model_inplace_wt = curve_fit(model_inplace, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacef = true, maxIter=100)
-    @test fit_model_inplace_wt.converged
+    println("\t Non-inplace with jacobian with weights")
+    fit_wt_jac = @time curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; maxIter=100)
+    @test fit_wt_jac.converged
 
-    fit_jac_inplace_wt = curve_fit(model, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplacejac = true, maxIter=100)
-    @test fit_jac_inplace_wt.converged
+    println("\t Inplace with jacobian with weights")
+    fit_inplace_wt_jac = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; inplace = true, maxIter=100)
+    @test fit_inplace_wt_jac.converged
 
-    @test fit_wt.param == fit_model_inplace_wt.param == fit_jac_inplace_wt.param
-    
+    @test maximum(abs.(fit_wt_jac.param - fit_inplace_wt_jac.param)) < 1e-15
 
 end

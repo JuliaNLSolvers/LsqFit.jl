@@ -81,9 +81,9 @@ The default is to calculate the Jacobian using a central finite differences sche
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
 
-Inplace model and/or jacobian 
+Inplace model and jacobian 
 -------------------------
-It is possible to use an inplace model and/or jacobian for univariate regression. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
+It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian for univariate regression. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
 ```
 model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
@@ -91,7 +91,7 @@ function jacobian_inplace(J::Array{Float64,2},x,p)
         @. J[:,1] = exp(-x*p[2])     
         @. @views J[:,2] = -x*p[1]*J[:,1] 
     end
-fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplacejac = true, inplacef = true)
+fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplace = true)
 ```
 
 Existing Functionality
