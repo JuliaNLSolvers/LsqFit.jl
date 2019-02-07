@@ -16,7 +16,7 @@ Comp & Applied Math).
 # Keyword arguments
 * `x_tol::Real=1e-8`: search tolerance in x
 * `g_tol::Real=1e-12`: search tolerance in gradient
-* `maxIter::Integer=100`: maximum number of iterations
+* `maxIter::Integer=1000`: maximum number of iterations
 * `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
 * `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
 * `lambda::Real=10.0`: (inverse of) initial trust region radius
