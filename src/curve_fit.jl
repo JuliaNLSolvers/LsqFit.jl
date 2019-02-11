@@ -113,17 +113,6 @@ function curve_fit(model::Function, jacobian_model::Function,
     lmfit(f, g, p0, T[]; kwargs...)
 end
 
-#geodesic
-function curve_fit(model::Function, jacobian_model::Function, avv!::Function,
-            xpts::AbstractArray, ydata::AbstractArray, p0; kwargs...)
-
-    T = eltype(ydata)
-
-    f = (p) -> model(xpts, p) - ydata
-    g = (p) -> jacobian_model(xpts, p)
-    lmfit(f, g, avv!, p0, T[]; kwargs...)
-end
-
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
