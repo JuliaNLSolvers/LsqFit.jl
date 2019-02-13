@@ -78,6 +78,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
     Jdelta_buffer = similar(fcur)
+
     dir_deriv = Array{T}(undef,m)
 
     # Maintain a trace of the system.
@@ -88,7 +89,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         push!(tr, os)
         println(os)
     end
-   
     local J
     while (~converged && iterCt < maxIter)
         if need_jacobian
