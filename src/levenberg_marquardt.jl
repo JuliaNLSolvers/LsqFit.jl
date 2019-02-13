@@ -125,10 +125,11 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
             #GEODESIC ACCELERATION PART
             avv!(x, v, dir_deriv)
             mul!(a, transpose(J), dir_deriv)
-            a = JJ \ a # we multiply by g^-1
-            rmul!(a, -0.5)
+            rmul!(a, -1) #we multiply by -1 before the decomposition/division
+            LAPACK.potrf!('U', JJ) #in place cholesky decomposition
+            LAPACK.potrs!('U', JJ, a) #in short divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
+            rmul!(a, 0.5)
             delta_x = v + a
-            println("a:",a)
             #end of the GEODESIC ACCELERATION PART
         else
             delta_x = v
@@ -152,8 +153,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
 
         # if the linear assumption is valid, our new residual should be:
         predicted_residual = sum(abs2, J*delta_x + fcur)
-        
-  
 
         # try the step and compute its quality
         trial_f = f(x + delta_x)
@@ -161,6 +160,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         trial_residual = sum(abs2, trial_f)
         # step quality = residual change / predicted residual change
         rho = (trial_residual - residual) / (predicted_residual - residual)
+        #rho = avv! == nothing ? rho : abs(rho)
         if rho > min_step_quality
             x += delta_x
             fcur = trial_f
@@ -197,7 +197,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         converged = g_converged | x_converged 
     end
     
-    println("Num iter:",iterCt," geo:",avv! != nothing)
+    println("Num iter:",iterCt," geo:",avv! != nothing," res:",residual)
 
     MultivariateOptimizationResults(
         LevenbergMarquardt(),    # method
