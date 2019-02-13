@@ -110,7 +110,6 @@ function curve_fit(model::Function, jacobian_model::Function,
             xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; kwargs...) where T
 
     u = sqrt.(wt) # to be consistant with the matrix form
-
     f(p) = u .* ( model(xpts, p) - ydata )
     g(p) = u .* ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)

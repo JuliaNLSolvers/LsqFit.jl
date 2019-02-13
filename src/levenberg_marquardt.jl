@@ -37,7 +37,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     g! = x -> NLSolversBase.jacobian!!(df, x)
 
     value_jacobian!!(df, initial_x)
-
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
             throw(ArgumentError("Bounds must either be empty or of the same length as the number of parameters."))
@@ -111,7 +110,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         mul!(n_buffer, transpose(J), fcur)
         rmul!(n_buffer, -1)
         delta_x = JJ \ n_buffer
-
         # apply box constraints
         if !isempty(lower)
             @simd for i in 1:n
