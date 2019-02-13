@@ -33,8 +33,10 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     ) where T
 
     # Create residual and jacobian evaluators, should be inplace
-    f = x -> NLSolversBase.value!(df, x)
-    g = x -> NLSolversBase.jacobian!(df, x)
+    f! = x -> NLSolversBase.value!(df, x)
+    g! = x -> NLSolversBase.jacobian!!(df, x)
+
+    value_jacobian!!(df, initial_x)
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
@@ -62,7 +64,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     f_calls = 0
     g_calls = 0
 
-    fcur = f(x)
+    fcur = f!(x)
     f_calls += 1
     residual = sum(abs2, fcur)
 
@@ -84,7 +86,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     local J
     while (~converged && iterCt < maxIter)
         if need_jacobian
-            J = g(x)
+            J = g!(x)
             g_calls += 1
             need_jacobian = false
         end
@@ -128,7 +130,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         predicted_residual = sum(abs2, Jdelta_buffer)
 
         # try the step and compute its quality
-        trial_f = f(x + delta_x)
+        trial_f = f!(x + delta_x)
         f_calls += 1
         trial_residual = sum(abs2, trial_f)
         # step quality = residual change / predicted residual change
