@@ -15,8 +15,6 @@ module LsqFit
     import NLSolversBase: value, jacobian
     import StatsBase
     import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
-    
-
 
     import Base.summary
 

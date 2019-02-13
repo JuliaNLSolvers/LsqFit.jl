@@ -26,7 +26,7 @@ Comp & Applied Math).
 * `lower,upper=[]`: bound solution to these limits
 """
 
-# I think a smarted way to do this *might* be to create a type similar to `OnceDifferentiable` 
+# I think a smarter way to do this *might* be to create a type similar to `OnceDifferentiable` 
 # and the like. This way we could not only merge the two functions, but also have a convinient
 # way to provide an autodiff-made acceleration when someone doesn't provide an `avv`.
 # it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
@@ -77,6 +77,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     m = length(fcur)
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
+    Jdelta_buffer = similar(fcur)
     dir_deriv = Array{T}(undef,m)
 
     # Maintain a trace of the system.
@@ -87,7 +88,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         push!(tr, os)
         println(os)
     end
-    
+   
     local J
     while (~converged && iterCt < maxIter)
         if need_jacobian
@@ -102,7 +103,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         # Where we have used the equivalence: diagm(J'*J) = diagm(sum(abs2, J,1))
         # It is additionally useful to bound the elements of DtD below to help
         # prevent "parameter evaporation".
-        
         DtD = vec(sum(abs2, J, dims=1))
         for i in 1:length(DtD)
             if DtD[i] <= MIN_DIAGONAL
@@ -114,7 +114,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         @simd for i in 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
-        #n_buffer is delta C, JJ is g
+        #n_buffer is delta C, JJ is g compared to Mark's code
         mul!(n_buffer, transpose(J), fcur)
         rmul!(n_buffer, -1)
 
@@ -160,7 +160,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         trial_residual = sum(abs2, trial_f)
         # step quality = residual change / predicted residual change
         rho = (trial_residual - residual) / (predicted_residual - residual)
-        #rho = avv! == nothing ? rho : abs(rho)
         if rho > min_step_quality
             x += delta_x
             fcur = trial_f
@@ -188,15 +187,13 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         # check convergence criteria:
         # 1. Small gradient: norm(J^T * fcur, Inf) < g_tol
         # 2. Small step size: norm(delta_x) < x_tol
-
         if norm(J' * fcur, Inf) < g_tol
             g_converged = true
         elseif norm(delta_x) < x_tol*(x_tol + norm(x))
             x_converged = true
         end
-        converged = g_converged | x_converged 
+        converged = g_converged | x_converged
     end
-    
     println("Num iter:",iterCt," geo:",avv! != nothing," res:",residual)
 
     MultivariateOptimizationResults(
@@ -210,7 +207,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         0.0,                   # x_tol
         0.0,
         false,                 # f_converged
-
         0.0,                   # f_tol
         0.0,
         g_converged,           # g_converged
