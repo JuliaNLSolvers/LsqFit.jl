@@ -155,9 +155,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
             # decrease trust region radius
             lambda = min(lambda_increase*lambda, MAX_LAMBDA)
         end
-        # @show df.F
-        # @show df.x_f
-        # @show trial_f
+
         iterCt += 1
 
         # show state
