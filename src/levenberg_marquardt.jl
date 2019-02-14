@@ -32,10 +32,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
     ) where T
 
-    # Create residual and jacobian evaluators, should be inplace
-    f! = x -> NLSolversBase.value!(df, x)
-    g! = x -> NLSolversBase.jacobian!(df, x)
-
     # First evaluation
     value_jacobian!!(df, initial_x)
 
@@ -145,7 +141,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         rho = (trial_residual - residual) / (predicted_residual - residual)
         if rho > min_step_quality
             # apply the step to x - n_buffer is ready to be used by the delta_x
-            # calculations after this step. 
+            # calculations after this step.
             x .= n_buffer
             # There should be an update_x_value to do this safely
             copyto!(df.x_f, x)
