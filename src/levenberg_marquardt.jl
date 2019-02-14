@@ -32,11 +32,9 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
     ) where T
 
-    # Create residual and jacobian evaluators, should be inplace
-    f! = x -> NLSolversBase.value!(df, x)
-    g! = x -> NLSolversBase.jacobian!!(df, x)
-
+    # First evaluation
     value_jacobian!!(df, initial_x)
+
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
             throw(ArgumentError("Bounds must either be empty or of the same length as the number of parameters."))
@@ -56,39 +54,36 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     converged = false
     x_converged = false
     g_converged = false
-    need_jacobian = true
     iterCt = 0
     x = copy(initial_x)
     delta_x = copy(initial_x)
-    f_calls = 0
-    g_calls = 0
 
-    fcur = f!(x)
-    f_calls += 1
-    residual = sum(abs2, fcur)
+    trial_f = similar(value(df))
+    residual = sum(abs2, value(df))
 
     # Create buffers
     n = length(x)
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
-    Jdelta_buffer = similar(fcur)
+    Jdelta_buffer = similar(value(df))
+
+    # and an alias for the jacobian
+    J = jacobian(df)
 
     # Maintain a trace of the system.
     tr = OptimizationTrace{LevenbergMarquardt}()
     if show_trace
         d = Dict("lambda" => lambda)
-        os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), NaN, d)
+        os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
         push!(tr, os)
         println(os)
     end
 
-    local J
     while (~converged && iterCt < maxIter)
-        if need_jacobian
-            J = g!(x)
-            g_calls += 1
-            need_jacobian = false
-        end
+        # jacobian! will check if x is new or not, so it is only actually
+        # evaluated if x was updated last iteration.
+        jacobian!(df, x) # has alias J
+
         # we want to solve:
         #    argmin 0.5*||J(x)*delta_x + f(x)||^2 + lambda*||diagm(J'*J)*delta_x||^2
         # Solving for the minimum gives:
@@ -96,20 +91,23 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         # Where we have used the equivalence: diagm(J'*J) = diagm(sum(abs2, J,1))
         # It is additionally useful to bound the elements of DtD below to help
         # prevent "parameter evaporation".
+
         DtD = vec(sum(abs2, J, dims=1))
         for i in 1:length(DtD)
             if DtD[i] <= MIN_DIAGONAL
                 DtD[i] = MIN_DIAGONAL
             end
         end
-        # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*fcur )
+
+        # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*value(df) )
         mul!(JJ, transpose(J), J)
         @simd for i in 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
-        mul!(n_buffer, transpose(J), fcur)
+        mul!(n_buffer, transpose(J), value(df))
         rmul!(n_buffer, -1)
-        delta_x = JJ \ n_buffer
+        delta_x .= JJ \ n_buffer
+
         # apply box constraints
         if !isempty(lower)
             @simd for i in 1:n
@@ -123,46 +121,59 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         end
 
         # if the linear assumption is valid, our new residual should be:
-        mul!(Jdelta_buffer,J,delta_x)
-        @. Jdelta_buffer = Jdelta_buffer + fcur
+        mul!(Jdelta_buffer, J, delta_x)
+        Jdelta_buffer .= Jdelta_buffer .+ value(df)
         predicted_residual = sum(abs2, Jdelta_buffer)
 
         # try the step and compute its quality
-        trial_f = f!(x + delta_x)
-        f_calls += 1
+        # compute it inplace according to NLSolversBase value(obj, cache, state)
+        # interface. No bang (!) because it doesn't update df besides mutating
+        # the number of f_calls
+
+        # re-use n_buffer
+        n_buffer .= x .+ delta_x
+        value(df, trial_f, n_buffer)
+
+        # update the sum of squares
         trial_residual = sum(abs2, trial_f)
+
         # step quality = residual change / predicted residual change
         rho = (trial_residual - residual) / (predicted_residual - residual)
         if rho > min_step_quality
-            x += delta_x
-            fcur = trial_f
+            # apply the step to x - n_buffer is ready to be used by the delta_x
+            # calculations after this step.
+            x .= n_buffer
+            # There should be an update_x_value to do this safely
+            copyto!(df.x_f, x)
+            copyto!(value(df), trial_f)
             residual = trial_residual
             if rho > good_step_quality
                 # increase trust region radius
                 lambda = max(lambda_decrease*lambda, MIN_LAMBDA)
             end
-            need_jacobian = true
         else
             # decrease trust region radius
             lambda = min(lambda_increase*lambda, MAX_LAMBDA)
         end
+
         iterCt += 1
 
         # show state
         if show_trace
-            g_norm = norm(J' * fcur, Inf)
+            g_norm = norm(J' * value(df), Inf)
             d = Dict("g(x)" => g_norm, "dx" => delta_x, "lambda" => lambda)
-            os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, fcur), g_norm, d)
+            os = OptimizationState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
             println(os)
         end
 
         # check convergence criteria:
-        # 1. Small gradient: norm(J^T * fcur, Inf) < g_tol
+        # 1. Small gradient: norm(J^T * value(df), Inf) < g_tol
         # 2. Small step size: norm(delta_x) < x_tol
-        if norm(J' * fcur, Inf) < g_tol
+        if norm(J' * value(df), Inf) < g_tol
             g_converged = true
-        elseif norm(delta_x) < x_tol*(x_tol + norm(x))
+        end
+        if norm(delta_x) < x_tol*(x_tol + norm(x))
             x_converged = true
         end
         converged = g_converged | x_converged
@@ -172,7 +183,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         LevenbergMarquardt(),    # method
         initial_x,             # initial_x
         x,                     # minimizer
-        sum(abs2, fcur),       # minimum
+        sum(abs2, value(df)),       # minimum
         iterCt,                # iterations
         !converged,            # iteration_converged
         x_converged,           # x_converged
@@ -186,8 +197,8 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         0.0,
         false,                 # f_increased
         tr,                    # trace
-        f_calls,               # f_calls
-        g_calls,               # g_calls
+        first(df.f_calls),               # f_calls
+        first(df.df_calls),               # g_calls
         0                      # h_calls
     )
 end
