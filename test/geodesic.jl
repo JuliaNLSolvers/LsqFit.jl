@@ -33,14 +33,15 @@ end
     end =#
 
 function Avv!(p,v,dir_deriv)
+        v1 = v[1]
+        v2 = v[2]
         for i=1:length(xdata)
             #compute all the elements of the H matrix
             h11 = 0
             h12 = (-xdata[i] * exp(-xdata[i] * p[2]))
             #h21 = h12
             h22 = (xdata[i]^2 * p[1] * exp(-xdata[i] * p[2]))
-            v1 = v[1]
-            v2 = v[2]
+
             # manually compute v'Hv. This whole process might seem cumbersome, but 
             # allocating temporary matrices quickly becomes REALLY expensive and might even 
             # render the use of geodesic acceleration terribly inefficient  
@@ -65,11 +66,9 @@ end
     fit_geo = @time curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=10, avv! = Avv!,lambda=0, min_step_quality = 0)
     @test fit_geo.converged
 
-    println( maximum(fit.param-fit_geo.param))
+    @test maximum(abs.(fit.param-fit_geo.param)) < 1e-6
 
-    println("fit params:",fit.param)
-    println("fit params geo:",fit_geo.param)
-
+    @test maximum(abs.(fit.param-[1.0, 2.0])) < 1e-1
 
     #with noise
     yvars = 1e-6*rand(length(xdata))
@@ -90,8 +89,9 @@ end
     fit_geo_wt = @time curve_fit(model, jacobian_model, xdata, ydata,  1 ./ yvars, p0; maxIter=100, avv! = Avv!,lambda=0, min_step_quality = 0)
     @test fit_geo_wt.converged
 
-    println(maximum(fit_wt.param-fit_geo_wt.param))
+    @test maximum(abs.(fit_wt.param-fit_geo_wt.param)) < 1e-6
 
+    @test maximum(abs.(fit_wt.param-[1.0, 2.0])) < 1e-1
 
 end
 
