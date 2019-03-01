@@ -42,13 +42,13 @@ fit = curve_fit(model, xdata, ydata, p0)
 #	coef(fit): best fit parameters
 #	fit.resid: residuals = vector of residuals
 #	fit.jacobian: estimated Jacobian at solution
-
 lb = [1.1, -0.5]
 ub = [1.9, Inf]
+p0_bounds = [1.2, 1.2] # we have to start inside the bounds 
 # Optional upper and/or lower bounds on the free parameters can be passed as an argument.
 # Bounded and unbouded variables can be mixed by setting `-Inf` if no lower bounds
 # is to be enforced for that variable and similarly for `+Inf`
-fit_bounds = curve_fit(model, xdata, ydata, p0, lower=lb, upper=ub)
+fit_bounds = curve_fit(model, xdata, ydata, p0_bounds, lower=lb, upper=ub)
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:

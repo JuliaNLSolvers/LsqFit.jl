@@ -153,8 +153,6 @@ function curve_fit(model::Function, jacobian_model::Function,
         g = (p) -> u .* ( jacobian_model(xpts, p) )
         lmfit(f, g, p0, wt; kwargs...)
     end
-
-
 end
 
 function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
@@ -175,8 +173,8 @@ function curve_fit(model::Function, jacobian_model::Function,
             xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     u = cholesky(wt).U
 
-    f(p) = wt * ( model(xpts, p) - ydata )
-    g(p) = wt * ( jacobian_model(xpts, p) )
+    f(p) = u * ( model(xpts, p) - ydata )
+    g(p) = u * ( jacobian_model(xpts, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
