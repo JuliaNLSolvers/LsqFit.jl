@@ -29,7 +29,7 @@ function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; k
 end
 
 #for inplace f only
-function lmfit(f!, p0, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(f!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f!, p0, similar(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
