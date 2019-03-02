@@ -15,8 +15,6 @@ StatsBase.weights(lfr::LsqFitResult) = lfr.wt
 StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
-f!_from_f(f, F::AbstractArray) = f!_from_f(f, F::AbstractArray, false)
-
 # provide a method for those who have their own (non inplace) Jacobian function
 function lmfit(f, g::Function, p0, wt; kwargs...)
     r = f(p0)
