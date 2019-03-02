@@ -60,9 +60,9 @@ confidence_inter = confidence_interval(fit, 0.05)
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
 function jacobian_model(x,p)
-    J = Array{Float64}(undef, length(x),length(p))
-    J[:,1] = exp.(-x.*p[2])    #dmodel/dp[1]
-    J[:,2] = -x.*p[1].*J[:,1]  #dmodel/dp[2]
+    J = Array{Float64}(undef, length(x), length(p))
+    @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
+    @. @views J[:,2] = -x*p[1]*J[:,1] #dmodel/dp[2], thanks to @views we don't allocate memory for the J[:,1] slice
     J
 end
 fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
@@ -79,6 +79,19 @@ Automatic differentiation
 The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The defaul is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is also possible to use forward mode automatic differentiation as implemented in ForwardDiff.jl by using the `autodiff=:forwarddiff` keyword.
 ```
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
+```
+
+Inplace model and jacobian 
+-------------------------
+It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
+```
+model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
+
+function jacobian_inplace(J::Array{Float64,2},x,p)
+        @. J[:,1] = exp(-x*p[2])     
+        @. @views J[:,2] = -x*p[1]*J[:,1] 
+    end
+fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplace = true)
 ```
 
 Existing Functionality
