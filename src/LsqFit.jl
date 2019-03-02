@@ -12,7 +12,7 @@ module LsqFit
     using Distributions
     using OptimBase
     using LinearAlgebra
-    import NLSolversBase: value, jacobian, f!_from_f
+    import NLSolversBase: value, jacobian
     import StatsBase
     import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
 
