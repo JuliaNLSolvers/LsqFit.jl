@@ -83,7 +83,7 @@ fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 
 Inplace model and jacobian 
 -------------------------
-It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian for univariate regression. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
+It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
 ```
 model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
