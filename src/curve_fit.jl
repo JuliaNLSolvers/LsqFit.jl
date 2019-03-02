@@ -16,7 +16,7 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 # provide a method for those who have their own (non inplace) Jacobian function
-function lmfit(f, g::Function, p0, wt; kwargs...)
+function lmfit(f, g, p0, wt; kwargs...)
     r = f(p0)
     R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
@@ -94,7 +94,7 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
+function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
     # construct the cost function
     T = eltype(ydata)
 
@@ -107,7 +107,7 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, p
     end
 end
 
-function curve_fit(model::Function, jacobian_model::Function,
+function curve_fit(model, jacobian_model,
             xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
 
     T = eltype(ydata)
@@ -123,7 +123,7 @@ function curve_fit(model::Function, jacobian_model::Function,
     end
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
+function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -137,7 +137,7 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
     end
 end
 
-function curve_fit(model::Function, jacobian_model::Function,
+function curve_fit(model, jacobian_model,
             xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
 
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -153,7 +153,7 @@ function curve_fit(model::Function, jacobian_model::Function,
     end
 end
 
-function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
     # for example: an inverse_covariance matrix
@@ -167,7 +167,7 @@ function curve_fit(model::Function, xpts::AbstractArray, ydata::AbstractArray, w
     lmfit(f,p0,wt; kwargs...)
 end
 
-function curve_fit(model::Function, jacobian_model::Function,
+function curve_fit(model, jacobian_model,
             xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
     u = cholesky(wt).U
 
