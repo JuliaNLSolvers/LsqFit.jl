@@ -16,26 +16,26 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 # provide a method for those who have their own (non inplace) Jacobian function
-function lmfit(f, g, p0, wt; kwargs...)
+function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
     R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f and inplace g
-function lmfit(f!, g!, p0, wt, r; kwargs...)
+function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
     R = OnceDifferentiable(f!, g!, p0, similar(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f only
-function lmfit(f!, p0, wt, r; autodiff = :finite, kwargs...)
+function lmfit(f!, p0, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
     R = OnceDifferentiable(f!, p0, similar(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
+function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
@@ -56,7 +56,7 @@ function lmfit(f, p0, wt; autodiff = :finite, kwargs...)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, p0, wt; autodiff = :finite, kwargs...)
+function lmfit(R::OnceDifferentiable, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
     results = levenberg_marquardt(R, p0; kwargs...)
     p = minimizer(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
@@ -94,7 +94,7 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
+function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
     # construct the cost function
     T = eltype(ydata)
 
@@ -108,7 +108,7 @@ function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, p0; inplace
 end
 
 function curve_fit(model, jacobian_model,
-            xpts::AbstractArray, ydata::AbstractArray, p0; inplace = false, kwargs...)
+            xpts::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
 
     T = eltype(ydata)
 
@@ -123,7 +123,7 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
+function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractArray; inplace = false, kwargs...) where T
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
