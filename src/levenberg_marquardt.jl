@@ -34,7 +34,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10., lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
-    show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0), avv!::Union{Function,Nothing} = nothing
+    show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0), avv!::Union{Function,Nothing,Avv} = nothing
     ) where T
 
     # Create residual and jacobian evaluators, should be inplace
@@ -90,6 +90,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         println(os)
     end
     local J
+
     while (~converged && iterCt < maxIter)
         if need_jacobian
             J = g(x)
@@ -194,7 +195,6 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         end
         converged = g_converged | x_converged
     end
-    println("Num iter:",iterCt," geo:",avv! != nothing," res:",residual)
 
     MultivariateOptimizationResults(
         LevenbergMarquardt(),    # method
