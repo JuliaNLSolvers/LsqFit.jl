@@ -81,6 +81,37 @@ The default is to calculate the Jacobian using a central finite differences sche
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
 
+Geodesic acceleration
+---------------------
+This package implements optional geodesic acceleration, as outlined by [this paper](https://arxiv.org/pdf/1010.1449.pdf). To enabled it, one needs to specify the function computing the *[directional second derivative](https://math.stackexchange.com/questions/2342410/why-is-mathbfdt-h-mathbfd-the-second-directional-derivative)* of the function that is fitted, as the `avv!` parameter. It is also preferable to set `lambda` and `min_step_quality`to 0:
+```
+curve_fit(model, xdata, ydata, p0; avv! = Avv!,lambda=0, min_step_quality = 0)
+```
+`Avv!` must have the following form:
+- `p` is the array of parameters
+- `v`is the direction in which the direction is taken
+- `dir_deriv` is the output vector (the function is necessarily inplace)
+```
+function Avv!(p,v,dir_deriv)
+        v1 = v[1]
+        v2 = v[2]
+        for i=1:length(xdata)
+            #compute all the elements of the Hessian matrix
+            h11 = 0
+            h12 = (-xdata[i] * exp(-xdata[i] * p[2]))
+            #h21 = h12
+            h22 = (xdata[i]^2 * p[1] * exp(-xdata[i] * p[2]))
+
+            # manually compute v'Hv. This whole process might seem cumbersome, but 
+            # allocating temporary matrices quickly becomes REALLY expensive and might even 
+            # render the use of geodesic acceleration terribly inefficient  
+            dir_deriv[i] = h11*v1^2 + 2*h12*v1*v2 + h22*v2^2
+
+        end
+end 
+```
+Typically, if the model to fit outputs `[y_1(x),y_2(x),...,y_m(x)]`, and that the input data is `xdata` then `Avv!`should output an array of size `m`, where each element is `v'*H_i(xdata,p)*v`, where `H_i`is the Hessian matrix of the output `y_i`with respect to the parameter vector `p`.
+
 Existing Functionality
 ----------------------
 
