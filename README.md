@@ -74,13 +74,17 @@ There's nothing inherently different if there are more than one variable enterin
 ```julia
 @. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
 ```
-Automatic differentiation
+Evaluating the Jacobian and using automatic differentiation
 -------------------------
-The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The defaul is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is also possible to use forward mode automatic differentiation as implemented in ForwardDiff.jl by using the `autodiff=:forwarddiff` keyword.
+The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The defaul is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying `autodiff=:finiteforward`:
+```
+fit = curve_fit(model, xdata, ydata, p0; autodiff=:finiteforward)
+```
+It is also possible to use forward mode automatic differentiation as implemented in ForwardDiff.jl by using the `autodiff=:forwarddiff` keyword.
 ```
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
-
+Here, you have to be careful not to manually restrict any types in your code to, say, `Float64`, because ForwardDiff.jl works by passing a special number type through your functions, to auto*magically* calculate the value and gradient with one evaluation.
 Inplace model and jacobian 
 -------------------------
 It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
