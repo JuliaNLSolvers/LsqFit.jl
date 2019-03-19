@@ -15,6 +15,12 @@ StatsBase.weights(lfr::LsqFitResult) = lfr.wt
 StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
+function check_data_health(xdata, ydata)
+    if any(isinf, xdata) || any(isinf, ydata) || any(isnan, xdata) || any(isnan, ydata)
+        error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
+    end
+end
+
 # provide a method for those who have their own (non inplace) Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
@@ -94,66 +100,71 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+    check_data_health(xdata, ydata)
     # construct the cost function
     T = eltype(ydata)
 
     if inplace
-        f! = (F,p)  -> (model(F,xpts,p); @. F = F - ydata)
+        f! = (F,p)  -> (model(F,xdata,p); @. F = F - ydata)
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
-        f = (p) -> model(xpts, p) - ydata
+        f = (p) -> model(xdata, p) - ydata
         lmfit(f,p0,T[]; kwargs...)
     end
 end
 
 function curve_fit(model, jacobian_model,
-            xpts::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+            xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+    check_data_health(xdata, ydata)
 
     T = eltype(ydata)
 
     if inplace
-        f! = (F,p) -> (model(F,xpts,p); @. F = F - ydata)
-        g! = (G,p)  -> jacobian_model(G, xpts, p)
+        f! = (F,p) -> (model(F,xdata,p); @. F = F - ydata)
+        g! = (G,p)  -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
     else 
-        f = (p) -> model(xpts, p) - ydata
-        g = (p) -> jacobian_model(xpts, p)
+        f = (p) -> model(xdata, p) - ydata
+        g = (p) -> jacobian_model(xdata, p)
         lmfit(f, g, p0, T[]; kwargs...)
     end
 end
 
-function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractArray; inplace = false, kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractArray; inplace = false, kwargs...) where T
+    check_data_health(xdata, ydata)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
     
     if inplace
-        f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
+        f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
     else
-        f = (p)  -> u .* ( model(xpts, p) - ydata )
+        f = (p)  -> u .* ( model(xdata, p) - ydata )
         lmfit(f,p0,wt; kwargs...)
     end
 end
 
 function curve_fit(model, jacobian_model,
-            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
-
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
+    check_data_health(xdata, ydata)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
-        f! = (F,p) -> (model(F,xpts,p); @. F = u*(F - ydata))
-        g! = (G,p) -> (jacobian_model(G, xpts, p); @. G = u*G )
+        f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
+        g! = (G,p) -> (jacobian_model(G, xdata, p); @. G = u*G )
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     else 
-        f = (p) -> u .* ( model(xpts, p) - ydata )
-        g = (p) -> u .* ( jacobian_model(xpts, p) )
+        f = (p) -> u .* ( model(xdata, p) - ydata )
+        g = (p) -> u .* ( jacobian_model(xdata, p) )
         lmfit(f, g, p0, wt; kwargs...)
     end
 end
 
-function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+    check_data_health(xdata, ydata)
+
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
     # for example: an inverse_covariance matrix
@@ -163,16 +174,18 @@ function curve_fit(model, xpts::AbstractArray, ydata::AbstractArray, wt::Abstrac
     # This requires the matrix to be positive definite
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xpts, p) - ydata )
+    f(p) = u * ( model(xdata, p) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
 function curve_fit(model, jacobian_model,
-            xpts::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+    check_data_health(xdata, ydata)
+
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xpts, p) - ydata )
-    g(p) = u * ( jacobian_model(xpts, p) )
+    f(p) = u * ( model(xdata, p) - ydata )
+    g(p) = u * ( jacobian_model(xdata, p) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 
