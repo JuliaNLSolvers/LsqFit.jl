@@ -124,11 +124,11 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         
         if avv! != nothing
             #GEODESIC ACCELERATION PART
-            avv!(x, v, dir_deriv)
+            avv!(dir_deriv, x, v)
             mul!(a, transpose(J), dir_deriv)
             rmul!(a, -1) #we multiply by -1 before the decomposition/division
             LAPACK.potrf!('U', JJ) #in place cholesky decomposition
-            LAPACK.potrs!('U', JJ, a) #in short divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
+            LAPACK.potrs!('U', JJ, a) #divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
             rmul!(a, 0.5)
             delta_x = v + a
             #end of the GEODESIC ACCELERATION PART

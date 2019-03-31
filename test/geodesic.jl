@@ -30,7 +30,7 @@ let
     # - the basic idea is to see the model output as simply a collection of functions: f1...fm
     # - then Avv return an array of size m, where each elements corresponds to
     # v'H(p)v, with H an n*n Hessian matrix of the m-th function, with n the size of p
-    function manual_avv!(p,v,dir_deriv)
+    function manual_avv!(dir_deriv,p,v)
         v1 = v[1]
         v2 = v[2]
         for i=1:length(xdata)

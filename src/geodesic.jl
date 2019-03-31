@@ -4,19 +4,19 @@ function make_out_of_place_func(f!, x, make_buffer)
     x -> f!(y, x)
 end
 
-struct OutOfPlace{F}
+struct OutOfPlace{F,D}
     f!::F
-    out_of_place_funcs::Dict{Type, Function}
-    make_buffer::Function
+    out_of_place_funcs::Dict{Type, D}
+    make_buffer::D
     
-    function OutOfPlace(f!::T, dict, shape::Tuple) where T
+    function OutOfPlace(f!::T, dict::Dict{Type, D}, shape::Tuple) where {T,D}
         
         mk(::T, p) = similar(p, shape)
-        new{T}(f!, dict, mk)
+        new{T,D}(f!, dict, mk)
     end
 end
 
-OutOfPlace(f!, shape) = OutOfPlace(f!, Dict{Type, Function}(), shape)
+OutOfPlace(f!, shape) = OutOfPlace(f!, Dict{Type, Function}(), shape) #no sure how to remove the `Function` here
 
 eval_f(f::F, x) where {F} = f(x) # function barrier
 function (oop::OutOfPlace{F})(x) where {F}
@@ -46,17 +46,17 @@ struct Avv
     end
 end
 
-function (avv::Avv)(p::AbstractVector, v::AbstractVector, dir_deriv::AbstractVector)
+function (avv::Avv)(dir_deriv::AbstractVector, p::AbstractVector, v::AbstractVector)
     hess = avv.h!(avv.hessians, p) #half of the runtime
-    vHv!(hess,v,dir_deriv) #half of the runtime, almost all the memory
+    vHv!(dir_deriv, hess,v) #half of the runtime, almost all the memory
 end
 
-function vHv!(hessians::AbstractArray,v::AbstractVector,dir_deriv::AbstractVector)
+function vHv!(dir_deriv::AbstractVector, hessians::AbstractArray,v::AbstractVector)
     tmp = similar(v) #v shouldn't be too large in general, so I kept it here
     vt = v'
     
     for i=1:length(dir_deriv)
-        @views mul!(tmp, hessians[:,:,i], v) #this line is particularly expensive
+        @views mul!(tmp, hessians[:,:,i], v) #this line is particularly expensive memory-wise
         dir_deriv[i] = vt*tmp
     end
     
