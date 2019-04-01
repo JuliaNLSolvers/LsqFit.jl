@@ -29,16 +29,23 @@ function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
 end
 
 #for inplace f and inplace g
-function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
-    R = OnceDifferentiable(f!, g!, p0, similar(r); inplace = true)
+function lmfit(f, g, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; inplace=false, kwargs...)
+    R = OnceDifferentiable(f, g, p0, similar(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f only
-function lmfit(f!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
-    autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f!, p0, similar(r); inplace = true, autodiff = autodiff)
+function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; inplace=false, autodiff = :finite, kwargs...)
+    R = OnceDifferentiable(f, p0, similar(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
+end
+
+#experimental geo, I let the `inplace` machinery but it isn't avilable yet
+function lmfit(f, g, avv!, p0::AbstractArray, wt::AbstractArray; inplace = false, kwargs...)
+
+    R = OnceDifferentiable(f, p0, similar(r); inplace = true)
+
+    lmfit(R, avv!, p0, wt;kwargs...)
 end
 
 function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
@@ -110,7 +117,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::Abstra
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
         f = (p) -> model(xdata, p) - ydata
-        lmfit(f,p0,T[]; kwargs...)
+        lmfit(f, p0, T[]; kwargs...)
     end
 end
 
@@ -124,7 +131,7 @@ function curve_fit(model, jacobian_model,
         f! = (F,p) -> (model(F,xdata,p); @. F = F - ydata)
         g! = (G,p)  -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
-    else 
+    else
         f = (p) -> model(xdata, p) - ydata
         g = (p) -> jacobian_model(xdata, p)
         lmfit(f, g, p0, T[]; kwargs...)
@@ -136,7 +143,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
-    
+
     if inplace
         f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
@@ -155,7 +162,7 @@ function curve_fit(model, jacobian_model,
         f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         g! = (G,p) -> (jacobian_model(G, xdata, p); @. G = u*G )
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
-    else 
+    else
         f = (p) -> u .* ( model(xdata, p) - ydata )
         g = (p) -> u .* ( jacobian_model(xdata, p) )
         lmfit(f, g, p0, wt; kwargs...)
