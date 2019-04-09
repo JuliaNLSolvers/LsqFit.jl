@@ -25,11 +25,16 @@ Comp & Applied Math).
 * `show_trace::Bool=false`: print a status summary on each iteration if true
 * `lower,upper=[]`: bound solution to these limits
 """
+
+# I think a smarter way to do this *might* be to create a type similar to `OnceDifferentiable`
+# and the like. This way we could not only merge the two functions, but also have a convinient
+# way to provide an autodiff-made acceleration when someone doesn't provide an `avv`.
+# it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
 function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T};
     x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
     lambda::Real = 10.0, lambda_increase::Real = 10.0, lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
-    show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0)
+    show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0), avv!::Union{Function,Nothing,Avv} = nothing
     ) where T
 
     # First evaluation
@@ -57,18 +62,22 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     iterCt = 0
     x = copy(initial_x)
     delta_x = copy(initial_x)
+    a = similar(x)
 
     trial_f = similar(value(df))
     residual = sum(abs2, value(df))
 
     # Create buffers
     n = length(x)
+    m = length(value(df))
     JJ = Matrix{T}(undef, n, n)
     n_buffer = Vector{T}(undef, n)
     Jdelta_buffer = similar(value(df))
 
     # and an alias for the jacobian
     J = jacobian(df)
+    dir_deriv = Array{T}(undef,m)
+    v = Array{T}(undef,n)
 
     # Maintain a trace of the system.
     tr = OptimizationTrace{LevenbergMarquardt}()
@@ -104,9 +113,30 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         @simd for i in 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
+        #n_buffer is delta C, JJ is g compared to Mark's code
         mul!(n_buffer, transpose(J), value(df))
         rmul!(n_buffer, -1)
-        delta_x .= JJ \ n_buffer
+
+        v .= JJ \ n_buffer
+
+
+        if avv! != nothing
+            #GEODESIC ACCELERATION PART
+            avv!(dir_deriv, x, v)
+            mul!(a, transpose(J), dir_deriv)
+            rmul!(a, -1) #we multiply by -1 before the decomposition/division
+            LAPACK.potrf!('U', JJ) #in place cholesky decomposition
+            LAPACK.potrs!('U', JJ, a) #divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
+            rmul!(a, 0.5)
+            delta_x .= v .+ a
+            #end of the GEODESIC ACCELERATION PART
+        else
+            delta_x = v
+        end
+
+
+
+
 
         # apply box constraints
         if !isempty(lower)

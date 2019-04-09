@@ -21,10 +21,10 @@ function check_data_health(xdata, ydata)
     end
 end
 
-# provide a method for those who have their own (non inplace) Jacobian function
+# provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
+    R = OnceDifferentiable(f, g, p0, similar(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -35,9 +35,8 @@ function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; k
 end
 
 #for inplace f only
-function lmfit(f!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
-    autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f!, p0, similar(r); inplace = true, autodiff = autodiff)
+function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
+    R = OnceDifferentiable(f, p0, similar(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -110,7 +109,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::Abstra
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
         f = (p) -> model(xdata, p) - ydata
-        lmfit(f,p0,T[]; kwargs...)
+        lmfit(f, p0, T[]; kwargs...)
     end
 end
 
@@ -124,7 +123,7 @@ function curve_fit(model, jacobian_model,
         f! = (F,p) -> (model(F,xdata,p); @. F = F - ydata)
         g! = (G,p)  -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
-    else 
+    else
         f = (p) -> model(xdata, p) - ydata
         g = (p) -> jacobian_model(xdata, p)
         lmfit(f, g, p0, T[]; kwargs...)
@@ -136,7 +135,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
-    
+
     if inplace
         f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
@@ -155,7 +154,7 @@ function curve_fit(model, jacobian_model,
         f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         g! = (G,p) -> (jacobian_model(G, xdata, p); @. G = u*G )
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
-    else 
+    else
         f = (p) -> u .* ( model(xdata, p) - ydata )
         g = (p) -> u .* ( jacobian_model(xdata, p) )
         lmfit(f, g, p0, wt; kwargs...)
