@@ -22,7 +22,7 @@ function check_data_health(xdata, ydata)
 end
 
 # provide a method for those who have their own Jacobian function
-function lmfit(f, g, p0::AbstractArray, wt::AbstractArray, kwargs...)
+function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
     R = OnceDifferentiable(f, g, p0, similar(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)

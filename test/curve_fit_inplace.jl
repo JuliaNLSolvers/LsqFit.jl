@@ -15,13 +15,13 @@ let
     function jacobian_model(x,p)
         J = Array{Float64}(undef, length(x), length(p))
         @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. @views J[:,2] = -x*p[1]*J[:,1] 
+        @. @views J[:,2] = -x*p[1]*J[:,1]
         J
     end
 
     function jacobian_model_inplace(J::Array{Float64,2},x,p)
         @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. @views J[:,2] = -x*p[1]*J[:,1] 
+        @. @views J[:,2] = -x*p[1]*J[:,1]
     end
 
 
@@ -71,7 +71,7 @@ let
         evalg_inplace(p0);
     end
 
-    
+
     curve_fit(model, xdata, ydata, p0; maxIter=100); #warmup
     curve_fit(model_inplace, xdata, ydata, p0; inplace = true, maxIter=100);
 
