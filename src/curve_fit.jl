@@ -21,31 +21,23 @@ function check_data_health(xdata, ydata)
     end
 end
 
-# provide a method for those who have their own (non inplace) Jacobian function
-function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
+# provide a method for those who have their own Jacobian function
+function lmfit(f, g, p0::AbstractArray, wt::AbstractArray, kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, similar(r); inplace = false)
+    R = OnceDifferentiable(f, g, p0, similar(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f and inplace g
-function lmfit(f, g, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; inplace=false, kwargs...)
-    R = OnceDifferentiable(f, g, p0, similar(r); inplace = true)
+function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
+    R = OnceDifferentiable(f!, g!, p0, similar(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f only
-function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; inplace=false, autodiff = :finite, kwargs...)
+function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
     R = OnceDifferentiable(f, p0, similar(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
-end
-
-#experimental geo, I let the `inplace` machinery but it isn't avilable yet
-function lmfit(f, g, avv!, p0::AbstractArray, wt::AbstractArray; inplace = false, kwargs...)
-
-    R = OnceDifferentiable(f, p0, similar(r); inplace = true)
-
-    lmfit(R, avv!, p0, wt;kwargs...)
 end
 
 function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
