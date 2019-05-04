@@ -12,12 +12,12 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[extras]
-Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
-
 [compat]
 julia = "≥ 0.7.0"
 Distributions = "0.18, 0.19"
+
+[extras]
+Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 
 [targets]
 test = ["Test", "Calculus"]
