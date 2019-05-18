@@ -19,8 +19,8 @@ Comp & Applied Math).
 * `maxIter::Integer=1000`: maximum number of iterations
 * `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
 * `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
-* `lambda::Real=10`: upper limit of (inverse of) initial trust region radius according to min(lambda, tau*maximum(J'*J))
-* `tau`=1e-6
+* `lambda::Real=10`: (inverse of) initial trust region radius
+* `tau=Inf`: set initial trust region radius using the heuristic : tau*maximum(jacobian(df)'*jacobian(df))
 * `lambda_increase=10.0`: `lambda` is multiplied by this factor after step below min quality
 * `lambda_decrease=0.1`: `lambda` is multiplied by this factor after good quality steps
 * `show_trace::Bool=false`: print a status summary on each iteration if true
@@ -40,9 +40,9 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
 
     # First evaluation
     value_jacobian!!(df, initial_x)
+    
     if isfinite(tau)
-        lambda_heuristic = tau*maximum(jacobian(df)'*jacobian(df))
-        lambda = min(lambda, lambda_heuristic)
+        lambda = tau*maximum(jacobian(df)'*jacobian(df))
     end
 
 
