@@ -49,4 +49,7 @@ let
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
+
+
+    curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
 end
