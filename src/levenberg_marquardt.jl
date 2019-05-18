@@ -19,7 +19,8 @@ Comp & Applied Math).
 * `maxIter::Integer=1000`: maximum number of iterations
 * `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
 * `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
-* `lambda::Real=10.0`: (inverse of) initial trust region radius
+* `lambda::Real=10`: upper limit of (inverse of) initial trust region radius according to min(lambda, tau*maximum(J'*J))
+* `tau`=1e-6
 * `lambda_increase=10.0`: `lambda` is multiplied by this factor after step below min quality
 * `lambda_decrease=0.1`: `lambda` is multiplied by this factor after good quality steps
 * `show_trace::Bool=false`: print a status summary on each iteration if true
@@ -32,13 +33,15 @@ Comp & Applied Math).
 # it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
 function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T};
     x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000,
-    lambda::Real = 10.0, lambda_increase::Real = 10.0, lambda_decrease::Real = 0.1,
+    lambda = T(10), tau=1/T(10^6), lambda_increase::Real = 10.0, lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
     show_trace::Bool = false, lower::Vector{T} = Array{T}(undef, 0), upper::Vector{T} = Array{T}(undef, 0), avv!::Union{Function,Nothing,Avv} = nothing
     ) where T
 
     # First evaluation
     value_jacobian!!(df, initial_x)
+
+    lambda = min(lambda, tau*maximum(jacobian(df)'*jacobian(df)))
 
     # check parameters
     ((isempty(lower) || length(lower)==length(initial_x)) && (isempty(upper) || length(upper)==length(initial_x))) ||
