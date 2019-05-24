@@ -85,6 +85,7 @@ It is also possible to use forward mode automatic differentiation as implemented
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
 Here, you have to be careful not to manually restrict any types in your code to, say, `Float64`, because ForwardDiff.jl works by passing a special number type through your functions, to auto*magically* calculate the value and gradient with one evaluation.
+
 Inplace model and jacobian 
 -------------------------
 It is possible to either use an inplace model, or an inplace model *and* an inplace jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory
