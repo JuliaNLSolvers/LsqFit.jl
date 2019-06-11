@@ -101,7 +101,7 @@ fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplace = tru
 
 Geodesic acceleration
 ---------------------
-This package implements optional geodesic acceleration, as outlined by [this paper](https://arxiv.org/pdf/1010.1449.pdf). To enabled it, one needs to specify the function computing the *[directional second derivative](https://math.stackexchange.com/questions/2342410/why-is-mathbfdt-h-mathbfd-the-second-directional-derivative)* of the function that is fitted, as the `avv!` parameter. It is also preferable to set `lambda` and `min_step_quality`to 0:
+This package implements optional geodesic acceleration, as outlined by [this paper](https://arxiv.org/pdf/1010.1449.pdf). To enable it, one needs to specify the function computing the *[directional second derivative](https://math.stackexchange.com/questions/2342410/why-is-mathbfdt-h-mathbfd-the-second-directional-derivative)* of the function that is fitted, as the `avv!` parameter. It is also preferable to set `lambda` and `min_step_quality`to `0`:
 ```
 curve_fit(model, xdata, ydata, p0; avv! = Avv!,lambda=0, min_step_quality = 0)
 ```
