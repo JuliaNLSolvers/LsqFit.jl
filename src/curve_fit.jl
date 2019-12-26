@@ -16,6 +16,9 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 function check_data_health(xdata, ydata)
+    if any(ismissing, xdata) || any(ismissing, ydata)
+        error("Data contains `missing` values and a fit cannot be performed")
+    end
     if any(isinf, xdata) || any(isinf, ydata) || any(isnan, xdata) || any(isnan, ydata)
         error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
     end
