@@ -1,4 +1,12 @@
 let
+    # before testing the model, check whether missing/null data is rejected
+    tdata = [rand(1:10, 5)..., missing]
+    @test_throws ErrorException("Data contains `missing` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
+    tdata = [rand(1:10, 5)..., Inf]
+    @test_throws ErrorException("Data contains `Inf` or `NaN` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
+    tdata = [rand(1:10, 5)..., NaN]
+    @test_throws ErrorException("Data contains `Inf` or `NaN` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
+   
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
     model(x, p) = p[1] .* exp.(-x .* p[2])
