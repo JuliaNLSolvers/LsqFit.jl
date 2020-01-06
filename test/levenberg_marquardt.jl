@@ -55,7 +55,7 @@
         ydata = model(xdata, [1.0 2.0]) + 0.01*randn(_nobs)
 
         f_lsq = p -> model(xdata, p) - ydata
-        g_lsq = p -> NLSolversBase.DiffEqDiffTools.finite_difference_jacobian(f_lsq, x)
+        g_lsq = p -> NLSolversBase.DiffEqDiffTools.finite_difference_jacobian(f_lsq, p)
 
         R3 = OnceDifferentiable(f_lsq, g_lsq, zeros(2), zeros(_nobs); inplace = false)
         results = LsqFit.levenberg_marquardt(R3, [0.5, 0.5])
@@ -75,7 +75,7 @@
 
         # TODO: Change to `model.(xdata, p) .- ydata` when 0.4 support is dropped
         f_lsq = p -> model(xdata, p) - ydata
-        g_lsq = p -> NLSolversBase.DiffEqDiffTools.finite_difference_jacobian(f_lsq, x)
+        g_lsq = p -> NLSolversBase.DiffEqDiffTools.finite_difference_jacobian(f_lsq, p)
 
         R4 = OnceDifferentiable(f_lsq, g_lsq, similar(p_generate), zeros(length(xdata)); inplace = false)
 
