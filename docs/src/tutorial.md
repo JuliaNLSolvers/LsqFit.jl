@@ -76,7 +76,7 @@ J_m(t, \boldsymbol{\gamma}) = \begin{bmatrix}
             \end{bmatrix}
 ```
 
-By default, the finite difference method, `Calculus.jacobian()`, is used to approximate the Jacobian for the data fitting algorithm and covariance computation. Alternatively, a function which calculates the Jacobian can be supplied to `curve_fit()` for faster and/or more accurate results.
+By default, the finite differences is used (see [NLSolversBase.jl](https://github.com/JuliaNLSolvers/NLSolversBase.jl) for more information), is used to approximate the Jacobian for the data fitting algorithm and covariance computation. Alternatively, a function which calculates the Jacobian can be supplied to `curve_fit()` for faster and/or more accurate results.
 
 ```Julia
 function j_m(t,p)
