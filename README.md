@@ -6,10 +6,6 @@ The LsqFit package is a small library that provides basic least-squares fitting 
 [![Build Status](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl.svg)](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl)
 [![latest](https://img.shields.io/badge/docs-latest-blue.svg)](https://julianlsolvers.github.io/LsqFit.jl/latest/)
 
-[![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.3.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.3)
-[![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.4.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.4)
-[![LsqFit](http://pkg.julialang.org/badges/LsqFit_0.5.svg)](http://pkg.julialang.org/?pkg=LsqFit&ver=0.5)
-
 Basic Usage
 -----------
 
