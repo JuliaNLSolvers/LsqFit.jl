@@ -46,7 +46,7 @@ julia> param = fit.param
  2.0735
 ```
 
-`LsqFit.jl` also provides functions to exam the goodness of fit. `estimate_covar(fit)` computes the estimated covariance matrix.
+`LsqFit.jl` also provides functions to examinep0 = [0.5, 0.5] the goodness of fit. `estimate_covar(fit)` computes the estimated covariance matrix.
 
 ```Julia
 julia> cov = estimate_covar(fit)
