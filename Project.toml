@@ -12,7 +12,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-Distributions = "0.18, 0.19, 0.20, 0.21, 0.22"
+Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23"
 ForwardDiff = "0.10"
 NLSolversBase = "7.5"
 OptimBase = "2.0"
