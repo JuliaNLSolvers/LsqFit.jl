@@ -107,7 +107,7 @@ curve_fit(model, xdata, ydata, p0; avv! = Avv!,lambda=0, min_step_quality = 0)
 - `v`is the direction in which the direction is taken
 - `dir_deriv` is the output vector (the function is necessarily inplace)
 ```
-function Avv!(p,v,dir_deriv)
+function Avv!(dir_deriv,p,v)
         v1 = v[1]
         v2 = v[2]
         for i=1:length(xdata)
@@ -126,6 +126,19 @@ function Avv!(p,v,dir_deriv)
 end 
 ```
 Typically, if the model to fit outputs `[y_1(x),y_2(x),...,y_m(x)]`, and that the input data is `xdata` then `Avv!`should output an array of size `m`, where each element is `v'*H_i(xdata,p)*v`, where `H_i`is the Hessian matrix of the output `y_i`with respect to the parameter vector `p`.
+
+Depending on the size of the dataset, the complexity of the model and the desired tolerance in the fit result, it may be worthwhile to use automatic differentiation (e.g. via `Zygote.jl` or `ForwardDiff.jl`) to determine the directional derivative. Although this is potentially less efficient than calculating the directional derivative manually, this additional information will generally lead to more accurate results.
+
+An example of such an implementation is given by:
+```
+using LinearAlgebra, Zygote
+
+function Avv!(dir_deriv,p,v)
+    for i=1:length(xdata)
+        dir_deriv[i] = transpose(v) * Zygote.hessian(z->model(xdata[i],z),p) * v
+    end
+end
+```
 
 Existing Functionality
 ----------------------
