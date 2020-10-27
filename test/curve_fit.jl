@@ -30,7 +30,7 @@ let
     # to supply your own jacobian instead of using the finite difference
     function jacobian_model(x,p)
         J = Array{Float64}(undef, length(x), length(p))
-        J[:,1] = exp.(-x.*p[2])     #dmodel/dp[1]
+        J[:,1] = exp.(-x.*p[2])             #dmodel/dp[1]
         J[:,2] = -x.*p[1].*J[:,1]           #dmodel/dp[2]
         J
     end
@@ -53,11 +53,14 @@ let
     @assert norm(errors - [0.017, 0.075]) < 0.1
 
     # test with user-supplied jacobian and weights
-    fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5])
+    fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0)
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
-
+    
+    # Parameters can also be inferred using arbitrary precision
+    fit = curve_fit(model, xdata, ydata, 1 ./ yvars, BigFloat.(p0); x_tol=1e-20, g_tol=1e-20)
+    @test fit.converged
 
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
 end
