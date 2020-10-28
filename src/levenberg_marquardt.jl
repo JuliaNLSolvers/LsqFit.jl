@@ -174,9 +174,9 @@ function levenberg_marquardt(
         jacobian!(df, x) # has alias J
         # Use QR with column pivoting to solve the regularized least squares problem
         #    argmin 0.5*||J(x)*delta_x + f(x)||^2 + lambda*||diagm(J'*J)*delta_x||^2
-        Q,R,p = qr(J, Val(true))
+        Q,R,p = qr(J, ColumnNorm())
         rhs = -Matrix(Q)'*value(df)
-        if isreal(R)
+        if eltype(J) <: Real
             RR = vcat(R, lambda*I)
             rhs = vcat(rhs, zeros(T, n))
         else
@@ -185,7 +185,7 @@ function levenberg_marquardt(
         end
         v[p] = (RR\rhs)
 
-        if avv! != nothing && isreal(J)  # Geodesic acceleration for complex Jacobian
+        if avv! != nothing && isreal(J)  # Geodesic acceleration for complex Jacobian needs to be verified for correctness. It might work as is.
             #GEODESIC ACCELERATION PART
             avv!(dir_deriv, x, v)
             mul!(a, J', dir_deriv)
