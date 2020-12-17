@@ -61,6 +61,8 @@ let
     # Parameters can also be inferred using arbitrary precision
     fit = curve_fit(model, xdata, ydata, 1 ./ yvars, BigFloat.(p0); x_tol=1e-20, g_tol=1e-20)
     @test fit.converged
+    fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, BigFloat.(p0); x_tol=1e-20, g_tol=1e-20)
+    @test fit.converged
 
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
 end
