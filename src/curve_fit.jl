@@ -27,19 +27,19 @@ end
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, similar(r); inplace=false)
+    R = OnceDifferentiable(f, g, p0, copy(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f and inplace g
 function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
-    R = OnceDifferentiable(f!, g!, p0, similar(r); inplace = true)
+    R = OnceDifferentiable(f!, g!, p0, copy(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f only
 function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
-    R = OnceDifferentiable(f, p0, similar(r); inplace = true, autodiff = autodiff)
+    R = OnceDifferentiable(f, p0, copy(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -60,7 +60,7 @@ function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwar
     # construct Jacobian function, which uses finite difference method
     r = f(p0)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f, p0, similar(r); inplace = false, autodiff = autodiff)
+    R = OnceDifferentiable(f, p0, copy(r); inplace = false, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -125,7 +125,7 @@ function curve_fit(model, jacobian_model,
     if inplace
         f! = (F,p) -> (model(F,xdata,p); @. F = F - ydata)
         g! = (G,p)  -> jacobian_model(G, xdata, p)
-        lmfit(f!, g!, p0, T[], similar(ydata); kwargs...)
+        lmfit(f!, g!, p0, T[], copy(ydata); kwargs...)
     else
         f = (p) -> model(xdata, p) - ydata
         g = (p) -> jacobian_model(xdata, p)
