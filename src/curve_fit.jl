@@ -283,11 +283,10 @@ julia> r_squared(myfit, ys)
 ```
 """
 function r_squared(fit, ydata)
-    mean(x) = sum(x)/length(x)
-
+    
     SS_res = sum(e->e^2, fit.resid)
 
-    ȳ = mean(ydata)
+    ȳ = sum(ydata)/length(ydata)
     SS_tot = sum(y->(y-ȳ)^2, ydata)
 
     return 1-SS_res/SS_tot
