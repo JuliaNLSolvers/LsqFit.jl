@@ -5,9 +5,9 @@ module LsqFit
            margin_error,
            confidence_interval,
            estimate_covar,
-           r_squared
+           r_squared,
            make_hessian,
-           Avv, 
+           Avv,
            # StatsBase reexports
            dof, coef, nobs, mse, rss,
            stderror, weights, residuals
