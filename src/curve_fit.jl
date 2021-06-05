@@ -266,8 +266,6 @@ end
 Calculate the "most general definition of the coefficient of determination"
 as prescribed in "https://en.wikipedia.org/wiki/Coefficient_of_determination#Definitions".
 
-`fit` should be a variable returned by `curve_fit()`
-
 # Examples
 ```julia-repl
 julia> using LsqFit
