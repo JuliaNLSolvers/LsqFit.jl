@@ -293,7 +293,7 @@ LsqFit.LsqFitResult{Vector{Float64}, Vector{Float64}, Matrix{Float64}, Vector{Fl
 julia> r2(myfit, ys)
 0.8553690031840835
 """
-function StatsBase.r2(lft::LsqFitResults, ydata::AbstractArray)
+function StatsBase.r2(lft::LsqFitResult, ydata::AbstractArray)
     return 1-rss(lfr)/tss(ydata)
 end
 
