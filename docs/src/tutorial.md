@@ -222,9 +222,9 @@ julia> confidence_intervals = confidence_interval(fit, 0.1)
  (1.91047, 2.09096)
 ```
 
-`r_squared()` computes the coefficient of determination. There are multiple definitions, but the one implemented is described as "The most general definition of the coefficient of determination" in [this wikipedia article](https://en.wikipedia.org/wiki/Coefficient_of_determination#Definitions).
+`r2()` or `r²()` computes the coefficient of determination. There are multiple definitions, but the one implemented is described as "The most general definition of the coefficient of determination" in [this wikipedia article](https://en.wikipedia.org/wiki/Coefficient_of_determination#Definitions).
 ```julia
-julia> r_squared(fit, ydata)
+julia> r2(fit, ydata)
 0.9985914750863337
 ```
 
