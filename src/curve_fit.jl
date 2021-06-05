@@ -260,8 +260,8 @@ function tss(data)
 end
 
 """
-    r2(fit, ydata)
-    r²(fit, ydata)
+    r2(fit::LsqFitResult, ydata)
+    r²(fit::LsqFitResult, ydata)
 
 Calculate the "most general definition of the coefficient of determination"
 as prescribed in "https://en.wikipedia.org/wiki/Coefficient_of_determination#Definitions".
