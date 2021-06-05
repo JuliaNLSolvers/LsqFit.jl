@@ -249,7 +249,19 @@ function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol
 end
 
 """
-    r_squared(fit, ydata)
+   tss(data)
+    
+Compute the total sum of squares of the input `data`.
+The output is proportional to the variance of the data.
+"""
+function tss(data)
+    ȳ = sum(ydata)/length(ydata)
+    SS_tot = sum(y->(y-ȳ)^2, ydata)
+end
+
+"""
+    r2(fit, ydata)
+    r²(fit, ydata)
 
 Calculate the "most general definition of the coefficient of determination"
 as prescribed in "https://en.wikipedia.org/wiki/Coefficient_of_determination#Definitions".
@@ -276,21 +288,15 @@ julia> p0 = [5, 0.5]
 2-element Vector{Float64}:
 
 julia> myfit = curve_fit(model, xs, ys, p0)
-LsqFit.LsqFitResult{Vector{Float64}, Vector{Float64}, Matrix{Float64}, ...
+LsqFit.LsqFitResult{Vector{Float64}, Vector{Float64}, Matrix{Float64}, Vector{Float64}}...
 
-julia> r_squared(myfit, ys)
+julia> r2(myfit, ys)
 0.8553690031840835
-```
 """
-function r_squared(fit, ydata)
-    
-    SS_res = sum(e->e^2, fit.resid)
-
-    ȳ = sum(ydata)/length(ydata)
-    SS_tot = sum(y->(y-ȳ)^2, ydata)
-
-    return 1-SS_res/SS_tot
+function StatsBase.r2(lft::LsqFitResults, ydata::AbstractArray)
+    return 1-rss(lfr)/tss(ydata)
 end
 
+const r² = r2
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
 @deprecate estimate_errors(fit::LsqFitResult, confidence=0.95; rtol::Real=NaN, atol::Real=0) margin_error(fit, 1-confidence; rtol=rtol, atol=atol)
