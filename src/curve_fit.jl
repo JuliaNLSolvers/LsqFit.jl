@@ -255,8 +255,8 @@ Compute the total sum of squares of the input `data`.
 The output is proportional to the variance of the data.
 """
 function tss(data)
-    ȳ = sum(ydata)/length(ydata)
-    SS_tot = sum(y->(y-ȳ)^2, ydata)
+    ȳ = sum(data)/length(data)
+    SS_tot = sum(y->(y-ȳ)^2, data)
 end
 
 """
