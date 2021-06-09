@@ -72,7 +72,10 @@ end
 
 """
     curve_fit(model, xdata, ydata, p0) -> fit
-Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
+    curve_fit(model, xdata, ydata, wt, p0) -> fit
+
+Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example),
+and `wt` is an optional array of weights.
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
 * `fit.resid` : residuals = vector of residuals
