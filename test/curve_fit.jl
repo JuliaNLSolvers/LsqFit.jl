@@ -49,7 +49,7 @@ let
 
     # can also get error estimates on the fit parameters
     errors = margin_error(fit, 0.1)
-    println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
+    println("norm(errors - [0.017, 0.075]) < 0.1 ? ", norm(errors - [0.017, 0.075]))
     @assert norm(errors - [0.017, 0.075]) < 0.1
 
     # test with user-supplied jacobian and weights
