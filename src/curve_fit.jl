@@ -25,25 +25,25 @@ function check_data_health(xdata, ydata)
 end
 
 # provide a method for those who have their own Jacobian function
-function lmfit(f, g, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray; kwargs...)
+function lmfit(f, g, p0::AbstractArray{<:AbstractFloat}, wt::AbstractArray{<:AbstractFloat}; kwargs...)
     r = f(p0)
     R = OnceDifferentiable(f, g, p0, copy(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f and inplace g
-function lmfit(f!, g!, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray, r::AbstractArray; kwargs...)
+function lmfit(f!, g!, p0::AbstractArray{<:AbstractFloat}, wt::AbstractArray{<:AbstractFloat}, r::AbstractArray{<:AbstractFloat}; kwargs...)
     R = OnceDifferentiable(f!, g!, p0, copy(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
 #for inplace f only
-function lmfit(f, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(f, p0::AbstractArray{<:AbstractFloat}, wt::AbstractArray{<:AbstractFloat}, r::AbstractArray{<:AbstractFloat}; autodiff = :finite, kwargs...)
     R = OnceDifferentiable(f, p0, copy(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(f, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(f, p0::AbstractArray{<:AbstractFloat}, wt::AbstractArray{<:AbstractFloat}; autodiff = :finite, kwargs...)
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
@@ -64,7 +64,7 @@ function lmfit(f, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray; autodi
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, p0::AbstractVector{<:AbstractFloat}, wt::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(R::OnceDifferentiable, p0::AbstractArray{<:AbstractFloat}, wt::AbstractArray{<:AbstractFloat}; autodiff = :finite, kwargs...)
     results = levenberg_marquardt(R, p0; kwargs...)
     p = minimizer(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
@@ -105,7 +105,7 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::AbstractVector{<:AbstractFloat}; inplace = false, kwargs...)
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray{<:AbstractFloat}; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
     # construct the cost function
     T = eltype(ydata)
@@ -120,7 +120,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::Abstra
 end
 
 function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, p0::AbstractVector{<:AbstractFloat}; inplace = false, kwargs...)
+            xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray{<:AbstractFloat}; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
 
     T = eltype(ydata)
@@ -136,7 +136,7 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractVector{<:AbstractFloat}; inplace = false, kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{<:AbstractFloat}, p0::AbstractArray{<:AbstractFloat}; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
@@ -152,7 +152,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
 end
 
 function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractVector{<:AbstractFloat}; inplace = false, kwargs...) where T
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{<:AbstractFloat}, p0::AbstractArray{<:AbstractFloat}; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
     u = sqrt.(wt) # to be consistant with the matrix form
 
@@ -167,7 +167,7 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0::AbstractVector{<:AbstractFloat}; kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{<:AbstractFloat, 2}, p0::AbstractArray{<:AbstractFloat}; kwargs...)
     check_data_health(xdata, ydata)
 
     # as before, construct a weighted cost function with where this
@@ -184,7 +184,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
 end
 
 function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0::AbstractVector{<:AbstractFloat}; kwargs...) where T
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{<:AbstractFloat, 2}, p0::AbstractArray{<:AbstractFloat}; kwargs...)
     check_data_health(xdata, ydata)
 
     u = cholesky(wt).U
