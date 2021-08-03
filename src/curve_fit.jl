@@ -72,13 +72,16 @@ end
 
 """
     curve_fit(model, xdata, ydata, p0) -> fit
-Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
+    curve_fit(model, xdata, ydata, wt, p0) -> fit
+
+Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example),
+and `wt` is an optional array of weights.
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
 * `fit.resid` : residuals = vector of residuals
 * `fit.jacobian` : estimated Jacobian at solution
 
-additionally, it is possible to quiry the degrees of freedom with
+additionally, it is possible to query the degrees of freedom with
 
 * `dof(fit)`
 * `coef(fit)`
