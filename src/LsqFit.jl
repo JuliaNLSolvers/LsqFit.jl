@@ -14,6 +14,7 @@ module LsqFit
     using OptimBase
     using LinearAlgebra
     using ForwardDiff
+    using HDF5 
     import NLSolversBase: value, jacobian
     import StatsBase
     import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
