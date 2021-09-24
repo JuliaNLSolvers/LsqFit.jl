@@ -65,4 +65,21 @@ let
     @test fit.converged
 
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
+    
+    fo = h5open("data.h5", "w")
+        write(fo, "FitResults", fit)
+    close(fo)
+    
+    fi = h5open("data.h5", "r")
+        fit_read = read(fi, "FitResults", LsqFit.FitResult)
+    close(fi)
+    
+    @test prod([
+        norm(fit_read.params - fit.params) / norm(fit.params) < 1E-10,  
+        norm(fit_read.resid - fit.resid) / norm(fit.resid) < 1E-10,
+        norm(fit_read.jacobian - fit.jacobian) / norm(fit.jacobian) < 1E-10,
+        fit_read.converged == fit.converged,
+        norm(fit_read.wt - fit.wt) / norm(fit.wt) < 1E-10
+    ])
+    
 end
