@@ -3,6 +3,7 @@
 #
 using LsqFit, Test, LinearAlgebra, Random
 using OptimBase
+using HDF5
 import NLSolversBase: OnceDifferentiable
 
 my_tests = ["curve_fit.jl", "levenberg_marquardt.jl", "curve_fit_inplace.jl", "geodesic.jl"]

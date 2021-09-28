@@ -64,22 +64,29 @@ let
     fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, BigFloat.(p0); x_tol=1e-20, g_tol=1e-20)
     @test fit.converged
 
-    curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
-    
+    ## Attention, HDF5 cannot r/w numbers of type `BigFloat` !
+    fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau=0.0001)
+
     fo = h5open("data.h5", "w")
         write(fo, "FitResults", fit)
     close(fo)
     
     fi = h5open("data.h5", "r")
-        fit_read = read(fi, "FitResults", LsqFit.FitResult)
+        fit_read = read(fi, "FitResults", LsqFit.LsqFitResult)
     close(fi)
-    
+
+    println("test read fit data and written fit data to be the same up to machine precision\n")
+
     @test prod([
-        norm(fit_read.params - fit.params) / norm(fit.params) < 1E-10,  
-        norm(fit_read.resid - fit.resid) / norm(fit.resid) < 1E-10,
-        norm(fit_read.jacobian - fit.jacobian) / norm(fit.jacobian) < 1E-10,
+        norm(fit_read.param - fit.param) / norm(fit.param) < 1E-15,  
+        norm(fit_read.resid - fit.resid) / norm(fit.resid) < 1E-15,
+        norm(fit_read.jacobian - fit.jacobian) / norm(fit.jacobian) < 1E-15,
         fit_read.converged == fit.converged,
-        norm(fit_read.wt - fit.wt) / norm(fit.wt) < 1E-10
+        length(fit.wt)==0 ? true : norm(fit_read.wt - fit.wt) / norm(fit.wt) < 1E-15
     ])
+
+
+    # Clean up the test hdf5 file
+    rm("data.h5"; force=true)
     
 end
