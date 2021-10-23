@@ -1,4 +1,4 @@
-let
+@testset "curve_fit_inplace" begin
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
     @. model(x, p) = p[1] * exp(-x * p[2])

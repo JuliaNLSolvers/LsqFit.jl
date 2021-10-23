@@ -1,4 +1,4 @@
-let
+@testset "curve_fit" begin
     # before testing the model, check whether missing/null data is rejected
     tdata = [rand(1:10, 5)..., missing]
     @test_throws ErrorException("Data contains `missing` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
@@ -6,7 +6,7 @@ let
     @test_throws ErrorException("Data contains `Inf` or `NaN` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
     tdata = [rand(1:10, 5)..., NaN]
     @test_throws ErrorException("Data contains `Inf` or `NaN` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
-   
+
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
     model(x, p) = p[1] .* exp.(-x .* p[2])
@@ -19,12 +19,12 @@ let
 
     for ad in (:finite, :forward, :forwarddiff)
         fit = curve_fit(model, xdata, ydata, p0; autodiff = ad)
-        @assert norm(fit.param - [1.0, 2.0]) < 0.05
+        @test norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
 
         # can also get error estimates on the fit parameters
         errors = margin_error(fit, 0.1)
-        @assert norm(errors - [0.017, 0.075]) < 0.01
+        @test norm(errors - [0.017, 0.075]) < 0.015
     end
     # if your model is differentiable, it can be faster and/or more accurate
     # to supply your own jacobian instead of using the finite difference
@@ -35,7 +35,7 @@ let
         J
     end
     jacobian_fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
-    @assert norm(jacobian_fit.param - [1.0, 2.0]) < 0.05
+    @test norm(jacobian_fit.param - [1.0, 2.0]) < 0.05
     @test jacobian_fit.converged
 
     # some example data
@@ -44,20 +44,20 @@ let
 
     fit = curve_fit(model, xdata, ydata, 1 ./ yvars, [0.5, 0.5])
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
-    @assert norm(fit.param - [1.0, 2.0]) < 0.05
+    @test norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
 
     # can also get error estimates on the fit parameters
     errors = margin_error(fit, 0.1)
     println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
-    @assert norm(errors - [0.017, 0.075]) < 0.1
+    @test norm(errors - [0.017, 0.075]) < 0.1
 
     # test with user-supplied jacobian and weights
     fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0)
     println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
-    @assert norm(fit.param - [1.0, 2.0]) < 0.05
+    @test norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
-    
+
     # Parameters can also be inferred using arbitrary precision
     fit = curve_fit(model, xdata, ydata, 1 ./ yvars, BigFloat.(p0); x_tol=1e-20, g_tol=1e-20)
     @test fit.converged

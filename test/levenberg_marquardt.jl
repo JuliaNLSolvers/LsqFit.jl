@@ -10,7 +10,7 @@
 
     R1 = OnceDifferentiable(f_lm, g_lm, zeros(2), zeros(2); inplace = false)
     results = LsqFit.levenberg_marquardt(R1, initial_x)
-    @assert norm(OptimBase.minimizer(results) - [0.0, 2.0]) < 0.01
+    @test norm(OptimBase.minimizer(results) - [0.0, 2.0]) < 0.01
 
 
     function rosenbrock_res(r, x)
@@ -34,7 +34,7 @@
 
     results = LsqFit.levenberg_marquardt(R2, initial_xrb)
 
-    @assert norm(OptimBase.minimizer(results) - [1.0, 1.0]) < 0.01
+    @test norm(OptimBase.minimizer(results) - [1.0, 1.0]) < 0.01
 
     # check estimate is within the bound PR #278
     result = LsqFit.levenberg_marquardt(R2, [150.0, 150.0]; lower = [10.0, 10.0], upper = [200.0, 200.0])
@@ -60,7 +60,7 @@
         R3 = OnceDifferentiable(f_lsq, g_lsq, zeros(2), zeros(_nobs); inplace = false)
         results = LsqFit.levenberg_marquardt(R3, [0.5, 0.5])
 
-        @assert norm(OptimBase.minimizer(results) - [1.0, 2.0]) < 0.05
+        @test norm(OptimBase.minimizer(results) - [1.0, 2.0]) < 0.05
     end
 
     let
