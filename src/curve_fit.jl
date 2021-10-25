@@ -16,13 +16,16 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 function check_data_health(xdata, ydata)
-    if any(ismissing, xdata) || any(ismissing, ydata)
-        error("Data contains `missing` values and a fit cannot be performed")
+    if is_unhealthy(xdata)
+        error("x data contains `missing`, `Inf` or `NaN` values and a fit cannot be performed")
     end
-    if any(isinf, xdata) || any(isinf, ydata) || any(isnan, xdata) || any(isnan, ydata)
-        error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
+    if is_unhealthy(ydata)
+        error("y data contains `missing`, `Inf` or `NaN` values and a fit cannot be performed")
     end
 end
+
+is_unhealthy(x) = ismissing(x) || isinf(x) || isnan(x)
+is_unhealthy(x::AbstractArray) = any(is_unhealthy, x)
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
