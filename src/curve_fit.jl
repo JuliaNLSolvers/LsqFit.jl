@@ -72,13 +72,16 @@ end
 
 """
     curve_fit(model, xdata, ydata, p0) -> fit
-Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example).
+    curve_fit(model, xdata, ydata, wt, p0) -> fit
+
+Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example),
+and `wt` is an optional array of weights.
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
 * `fit.resid` : residuals = vector of residuals
 * `fit.jacobian` : estimated Jacobian at solution
 
-additionally, it is possible to quiry the degrees of freedom with
+additionally, it is possible to query the degrees of freedom with
 
 * `dof(fit)`
 * `coef(fit)`
@@ -133,7 +136,7 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0::AbstractArray; inplace = false, kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
@@ -149,7 +152,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
 end
 
 function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T}, p0; inplace = false, kwargs...) where T
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
     check_data_health(xdata, ydata)
     u = sqrt.(wt) # to be consistant with the matrix form
 
@@ -164,7 +167,7 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractMatrix, p0::AbstractArray; kwargs...)
     check_data_health(xdata, ydata)
 
     # as before, construct a weighted cost function with where this
@@ -181,7 +184,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
 end
 
 function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray{T,2}, p0; kwargs...) where T
+            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractMatrix, p0::AbstractArray; kwargs...)
     check_data_health(xdata, ydata)
 
     u = cholesky(wt).U
