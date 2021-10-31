@@ -73,6 +73,7 @@ There's nothing inherently different if there are more than one variable enterin
 ```
 Evaluating the Jacobian and using automatic differentiation
 -------------------------
+The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying
 ```julia
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:finiteforward)
 ```
