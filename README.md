@@ -14,21 +14,19 @@ There are top-level methods `curve_fit()` and `margin_error()` that are useful f
 using LsqFit
 
 # a two-parameter exponential model
-# x: array of independent variables
+# x: independent variable
 # p: array of model parameters
-# model(x, p) will accept the full data set as the first argument `x`.
-# This means that we need to write our model function so it applies
-# the model to the full dataset. We use `@.` to apply the calculations
-# across all rows.
-@. model(x, p) = p[1]*exp(-x*p[2])
+# model(x, p) will accept the independent variable as the first argument `x`.
+model(x, p) = p[1]*exp(-x*p[2])
 ```
-The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. We simulate some data and chose our "true" parameters.
+We simulate some data and chose our "true" parameters.
+
 ```julia
 # some example data
 # xdata: independent variables
 # ydata: dependent variable
 xdata = range(0, stop=10, length=20)
-ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
+ydata = model.(xdata, Ref([1.0 2.0])) + 0.01*randn(length(xdata))
 p0 = [0.5, 0.5]
 ```
 Now, we're ready to fit the model.
@@ -56,10 +54,11 @@ confidence_inter = confidence_interval(fit, 0.05)
 
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
+# It should return a vector `J_i = df/d(p_i)`
 function jacobian_model(x,p)
-    J = Array{Float64}(undef, length(x), length(p))
-    @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-    @. @views J[:,2] = -x*p[1]*J[:,1] #dmodel/dp[2], thanks to @views we don't allocate memory for the J[:,1] slice
+    J = Array{Float64}(undef, length(p))
+    J[1] = exp(-x*p[2])     #dmodel/dp[1]
+    J[2] = -x*p[1]*J[1]     #dmodel/dp[2]
     J
 end
 fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
@@ -67,10 +66,19 @@ fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
 
 Multivariate regression
 -----------------------
-There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification:
+There's nothing inherently different if there are more than one variable
+entering the problem. The argument `x` must just be a vector:
 ```julia
-@. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
+multimodel(x, p) = p[1]*exp(-x[1]*p[2]+x[2]*p[3])
 ```
+and the `x` argument to the multivariate `curve_fit` function should be a
+vector of such input vectors.
+```julia
+x = [randn(2) for _ in 1:50]
+y = multimodel.(x, Ref([1.0, 2.0, 1.0])) + randn(50)
+fit = curve_fit(multimodel, x, y, [1.0, 1.0, 1.0])
+```
+
 Evaluating the Jacobian and using automatic differentiation
 -------------------------
 The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying `autodiff=:finiteforward`:
@@ -85,15 +93,18 @@ Here, you have to be careful not to manually restrict any types in your code to,
 
 In-place model and Jacobian
 -------------------------
-It is possible to either use an in-place model, or an in-place model *and* an in-place Jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory.
+It is possible to either use an in-place model, or an in-place model *and* an
+in-place Jacobian. It might be pertinent to use this feature when `curve_fit`
+is slow, or consumes a lot of memory. An in-place model must operate on the
+entire input vector, not individual elements.
 ```
-model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
+model_inplace!(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
-function jacobian_inplace(J::Array{Float64,2},x,p)
+function jacobian_inplace!(J::Array{Float64,2},x,p)
         @. J[:,1] = exp(-x*p[2])
         @. @views J[:,2] = -x*p[1]*J[:,1]
     end
-fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplace = true)
+fit = curve_fit(model_inplace!, jacobian_inplace!, xdata, ydata, p0; inplace = true)
 ```
 
 Geodesic acceleration
@@ -161,7 +172,7 @@ This performs a fit using a non-linear iteration to minimize the (weighted) resi
 
 `sigma = stderror(fit; atol, rtol)`:
 
-* `fit`: result of curve_fit (a `LsqFitResult` type)
+* `fit`: result of `curve_fit` (a `LsqFitResult` type)
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check
 
@@ -171,7 +182,7 @@ If no weights are provided for the fits, the variance is estimated from the mean
 
 `margin_of_error = margin_error(fit, alpha=0.05; atol, rtol)`:
 
-* `fit`: result of curve_fit (a `LsqFitResult` type)
+* `fit`: result of `curve_fit` (a `LsqFitResult` type)
 * `alpha`: significance level
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check
@@ -180,7 +191,7 @@ This returns the product of standard error and critical value of each parameter 
 
 `confidence_interval = confidence_interval(fit, alpha=0.05; atol, rtol)`:
 
-* `fit`: result of curve_fit (a `LsqFitResult` type)
+* `fit`: result of `curve_fit` (a `LsqFitResult` type)
 * `alpha`: significance level
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check

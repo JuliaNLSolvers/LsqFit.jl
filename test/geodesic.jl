@@ -1,5 +1,5 @@
-let
-    
+@testset "geodesic" begin
+
 
     # fitting noisy data to an exponential model
     model(x, p) = @. p[1] * exp(-x * p[2])
@@ -13,7 +13,7 @@ let
     function jacobian_model(x,p)
         J = Array{Float64}(undef, length(x), length(p))
         @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. @views J[:,2] = -x*p[1]*J[:,1] 
+        @. @views J[:,2] = -x*p[1]*J[:,1]
         J
     end
 
@@ -23,8 +23,8 @@ let
     hessians = Array{Float64}(undef, length(xdata)*length(p0), length(p0))
     h! = make_hessian(model_inplace, xdata, p0)
     auto_avv! = Avv(h!, length(p0), length(xdata))
-    
-    
+
+
 
     # a couple notes on the Avv function:
     # - the basic idea is to see the model output as simply a collection of functions: f1...fm
@@ -40,13 +40,13 @@ let
             #h21 = h12
             h22 = (xdata[i]^2 * p[1] * exp(-xdata[i] * p[2]))
 
-            # manually compute v'Hv. This whole process might seem cumbersome, but 
-            # allocating temporary matrices quickly becomes REALLY expensive and might even 
-            # render the use of geodesic acceleration terribly inefficient  
+            # manually compute v'Hv. This whole process might seem cumbersome, but
+            # allocating temporary matrices quickly becomes REALLY expensive and might even
+            # render the use of geodesic acceleration terribly inefficient
             dir_deriv[i] = h11*v1^2 + 2*h12*v1*v2 + h22*v2^2
 
         end
-    end 
+    end
 
 
     curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=1); #warmup
@@ -64,7 +64,7 @@ let
     fit_geo = @time curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=10, avv! = manual_avv!,lambda=0, min_step_quality = 0)
     @test fit_geo.converged
 
-    
+
     println("\t Geodesic - auto avv!")
     fit_geo_auto = @time curve_fit(model, jacobian_model, xdata, ydata, p0; maxIter=10, avv! = auto_avv!,lambda=0, min_step_quality = 0)
     @test fit_geo_auto.converged

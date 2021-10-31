@@ -31,9 +31,9 @@ Y_i = \gamma_1 \exp(\gamma_2 t_i) + \epsilon_i
 To fit data using `LsqFit.jl`, pass the defined model function (`m`), data (`tdata` and `ydata`) and the initial parameter value (`p0`) to `curve_fit()`. For now, `LsqFit.jl` only supports the Levenberg Marquardt algorithm.
 
 ```julia
-julia> # t: array of independent variables
+julia> # t: independent variable
 julia> # p: array of model parameters
-julia> m(t, p) = p[1] * exp.(p[2] * t)
+julia> m(t, p) = p[1] * exp(p[2] * t)
 julia> p0 = [0.5, 0.5]
 julia> fit = curve_fit(m, tdata, ydata, p0)
 ```
@@ -80,9 +80,9 @@ By default, the finite differences is used (see [NLSolversBase.jl](https://githu
 
 ```Julia
 function j_m(t,p)
-    J = Array{Float64}(length(t),length(p))
-    J[:,1] = exp.(p[2] .* t)       #df/dp[1]
-    J[:,2] = t .* p[1] .* J[:,1]   #df/dp[2]
+    J = Array{Float64}(length(p))
+    J[1] = exp(p[2] * t)       #df/dp[1]
+    J[2] = t * p[1] * J[1]     #df/dp[2]
     J
 end
 
@@ -267,7 +267,7 @@ The algorithm in `LsqFit.jl` will then provide a least squares solution $\boldsy
     In `LsqFit.jl`, the residual function passed to `levenberg_marquardt()` is in different format, if the weight is a vector:
 
     ```julia
-    r(p) = sqrt.(wt) .* ( model(xpts, p) - ydata )
+    r(p) = sqrt.(wt) .* ( model.(xpts, Ref(p)) - ydata )
     lmfit(r, g, p0, wt; kwargs...)
     ```
 

@@ -16,13 +16,16 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 function check_data_health(xdata, ydata)
-    if any(ismissing, xdata) || any(ismissing, ydata)
-        error("Data contains `missing` values and a fit cannot be performed")
+    if is_unhealthy(xdata)
+        error("x data contains `missing`, `Inf` or `NaN` values and a fit cannot be performed")
     end
-    if any(isinf, xdata) || any(isinf, ydata) || any(isnan, xdata) || any(isnan, ydata)
-        error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
+    if is_unhealthy(ydata)
+        error("y data contains `missing`, `Inf` or `NaN` values and a fit cannot be performed")
     end
 end
+
+is_unhealthy(x) = ismissing(x) || isinf(x) || isnan(x)
+is_unhealthy(x::AbstractArray) = any(is_unhealthy, x)
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
@@ -47,7 +50,7 @@ function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwar
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
-    #   model(xpts, params...) = ydata + error (noise)
+    #   model(x, params...) = y + error (noise)
 
     # this minimizes f(p) using a least squares sum of squared error:
     #   rss = sum(f(p)^2)
@@ -97,7 +100,7 @@ model(x, p) = p[1]*exp.(-x.*p[2])
 # xdata: independent variables
 # ydata: dependent variable
 xdata = range(0, stop=10, length=20)
-ydata = model(xdata, [1.0 2.0]) + 0.01*randn(length(xdata))
+ydata = model.(xdata, Ref([1.0 2.0])) .+ 0.01*randn(length(xdata))
 p0 = [0.5, 0.5]
 
 fit = curve_fit(model, xdata, ydata, p0)
@@ -114,7 +117,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::Abstra
         f! = (F,p)  -> (model(F,xdata,p); @. F = F - ydata)
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
-        f = (p) -> model(xdata, p) - ydata
+        f = (p) -> model.(xdata, Ref(p)) - ydata
         lmfit(f, p0, T[]; kwargs...)
     end
 end
@@ -130,8 +133,8 @@ function curve_fit(model, jacobian_model,
         g! = (G,p)  -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], copy(ydata); kwargs...)
     else
-        f = (p) -> model(xdata, p) - ydata
-        g = (p) -> jacobian_model(xdata, p)
+        f = (p) -> model.(xdata, Ref(p)) - ydata
+        g = (p) -> vcat(reshape.(jacobian_model.(xdata, Ref(p)), 1, :)...)
         lmfit(f, g, p0, T[]; kwargs...)
     end
 end
@@ -146,7 +149,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
         f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
     else
-        f = (p)  -> u .* ( model(xdata, p) - ydata )
+        f = (p)  -> u .* ( model.(xdata, Ref(p)) - ydata )
         lmfit(f,p0,wt; kwargs...)
     end
 end
@@ -161,8 +164,8 @@ function curve_fit(model, jacobian_model,
         g! = (G,p) -> (jacobian_model(G, xdata, p); @. G = u*G )
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     else
-        f = (p) -> u .* ( model(xdata, p) - ydata )
-        g = (p) -> u .* ( jacobian_model(xdata, p) )
+        f = (p) -> u .* ( model.(xdata, Ref(p)) - ydata )
+        g = (p) -> u .* ( vcat(reshape.(jacobian_model.(xdata, Ref(p)), 1, :)...) )
         lmfit(f, g, p0, wt; kwargs...)
     end
 end
@@ -179,7 +182,7 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
     # This requires the matrix to be positive definite
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xdata, p) - ydata )
+    f(p) = u * ( model.(xdata, Ref(p)) - ydata )
     lmfit(f,p0,wt; kwargs...)
 end
 
@@ -189,8 +192,8 @@ function curve_fit(model, jacobian_model,
 
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xdata, p) - ydata )
-    g(p) = u * ( jacobian_model(xdata, p) )
+    f(p) = u * ( model.(xdata, Ref(p)) - ydata )
+    g(p) = u * ( vcat(reshape.(jacobian_model.(xdata, Ref(p)), 1, :)...) )
     lmfit(f, g, p0, wt; kwargs...)
 end
 

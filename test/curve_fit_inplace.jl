@@ -1,21 +1,21 @@
-let
+@testset "curve_fit_inplace" begin
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
-    @. model(x, p) = p[1] * exp(-x * p[2])
+    model(x, p) = p[1] * exp(-x * p[2])
     model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
     # some example data
     Random.seed!(12345)
     xdata = range(0, stop=10, length=500000)
-    ydata = model(xdata, [1.0, 2.0]) + 0.01*randn(length(xdata))
+    ydata = model.(xdata, Ref([1.0, 2.0])) + 0.01*randn(length(xdata))
     p0 = [0.5, 0.5]
 
     # if your model is differentiable, it can be faster and/or more accurate
     # to supply your own jacobian instead of using the finite difference
     function jacobian_model(x,p)
-        J = Array{Float64}(undef, length(x), length(p))
-        @. J[:,1] = exp(-x*p[2])     #dmodel/dp[1]
-        @. @views J[:,2] = -x*p[1]*J[:,1]
+        J = Array{Float64}(undef, length(p))
+        J[1] = exp(-x*p[2])     #dmodel/dp[1]
+        J[2] = -x*p[1]*J[1]
         J
     end
 
@@ -25,8 +25,8 @@ let
     end
 
 
-    f(p) = model(xdata, p) - ydata
-    g(p) = jacobian_model(xdata, p)
+    f(p) = model.(xdata, Ref(p)) - ydata
+    g(p) = vcat(reshape.(jacobian_model.(xdata, Ref(p)), 1, :)...)
     df = OnceDifferentiable(f, g, p0, similar(ydata); inplace = false);
     evalf(x) = NLSolversBase.value!!(df, x)
     evalg(x) = NLSolversBase.jacobian!!(df, x)
@@ -42,8 +42,8 @@ let
     j_inplace = evalg_inplace(p0);
 
 
-    @test r == r_inplace
-    @test j == j_inplace
+    @test r ≈ r_inplace
+    @test j ≈ j_inplace
 
     println("--------------\nPerformance of non-inplace")
     println("\t Evaluation function")
@@ -91,7 +91,7 @@ let
     fit_inplace = @time curve_fit(model_inplace, xdata, ydata, p0; inplace = true, maxIter=100)
     @test fit_inplace.converged
 
-    @test fit_inplace.param == fit.param
+    @test fit_inplace.param ≈ fit.param
 
 
     println("\t Non-inplace with jacobian")
@@ -102,14 +102,14 @@ let
     fit_inplace_jac = @time curve_fit(model_inplace, jacobian_model_inplace, xdata, ydata, p0; inplace = true, maxIter=100)
     @test fit_inplace_jac.converged
 
-    @test fit_jac.param == fit_inplace_jac.param
+    @test fit_jac.param ≈ fit_inplace_jac.param
 
 
 
 
     # some example data
     yvars = 1e-6*rand(length(xdata))
-    ydata = model(xdata, [1.0, 2.0]) + sqrt.(yvars) .* randn(length(xdata))
+    ydata = model.(xdata, Ref([1.0, 2.0])) + sqrt.(yvars) .* randn(length(xdata))
 
     println("--------------\nPerformance of curve_fit with weights")
 

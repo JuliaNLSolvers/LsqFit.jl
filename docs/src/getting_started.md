@@ -16,9 +16,9 @@ m(t, \boldsymbol{p}) = p_1 \exp(-p_2 t)
 ```
 
 ```julia
-julia> # t: array of independent variable
+julia> # t: independent variable
 julia> # p: array of model parameters
-julia> model(t, p) = p[1] * exp.(-p[2] * t)
+julia> model(t, p) = p[1] * exp(-p[2] * t)
 ```
 
 For illustration purpose, we generate some fake data.
@@ -27,7 +27,7 @@ For illustration purpose, we generate some fake data.
 julia> # tdata: data of independent variable
 julia> # ydata: data of dependent variable
 julia> tdata = range(0, stop=10, length=20)
-julia> ydata = model(tdata, [1.0 2.0]) + 0.01*randn(length(tdata))
+julia> ydata = model.(tdata, Ref([1.0 2.0])) + 0.01*randn(length(tdata))
 ```
 
 Before fitting the data, we also need a initial value of parameters for `curve_fit()`.
@@ -46,7 +46,8 @@ julia> param = fit.param
  2.0735
 ```
 
-`LsqFit.jl` also provides functions to examinep0 = [0.5, 0.5] the goodness of fit. `estimate_covar(fit)` computes the estimated covariance matrix.
+`LsqFit.jl` also provides functions to examine the goodness of fit.
+`estimate_covar(fit)` computes the estimated covariance matrix.
 
 ```Julia
 julia> cov = estimate_covar(fit)
