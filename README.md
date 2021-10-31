@@ -73,12 +73,12 @@ There's nothing inherently different if there are more than one variable enterin
 ```
 Evaluating the Jacobian and using automatic differentiation
 -------------------------
-The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying `autodiff=:finiteforward`:
-```
+The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying
+```julia
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:finiteforward)
 ```
 It is also possible to use forward mode automatic differentiation as implemented in ForwardDiff.jl by using the `autodiff=:forwarddiff` keyword.
-```
+```julia
 fit = curve_fit(model, xdata, ydata, p0; autodiff=:forwarddiff)
 ```
 Here, you have to be careful not to manually restrict any types in your code to, say, `Float64`, because ForwardDiff.jl works by passing a special number type through your functions, to auto*magically* calculate the value and gradient with one evaluation.
@@ -86,7 +86,7 @@ Here, you have to be careful not to manually restrict any types in your code to,
 In-place model and Jacobian
 -------------------------
 It is possible to either use an in-place model, or an in-place model *and* an in-place Jacobian. It might be pertinent to use this feature when `curve_fit` is slow, or consumes a lot of memory.
-```
+```julia
 model_inplace(F, x, p) = (@. F = p[1] * exp(-x * p[2]))
 
 function jacobian_inplace(J::Array{Float64,2},x,p)
@@ -99,14 +99,15 @@ fit = curve_fit(model_inplace, jacobian_inplace, xdata, ydata, p0; inplace = tru
 Geodesic acceleration
 ---------------------
 This package implements optional geodesic acceleration, as outlined by [this paper](https://arxiv.org/pdf/1010.1449.pdf). To enable it, one needs to specify the function computing the *[directional second derivative](https://math.stackexchange.com/questions/2342410/why-is-mathbfdt-h-mathbfd-the-second-directional-derivative)* of the function that is fitted, as the `avv!` parameter. It is also preferable to set `lambda` and `min_step_quality`to `0`:
-```
+```julia
 curve_fit(model, xdata, ydata, p0; avv! = Avv!,lambda=0, min_step_quality = 0)
 ```
 `Avv!` must have the following form:
-- `p` is the array of parameters
-- `v`is the direction in which the direction is taken
-- `dir_deriv` is the output vector (the function is necessarily in-place)
-```
+* `p` is the array of parameters
+* `v`is the direction in which the direction is taken
+* `dir_deriv` is the output vector (the function is necessarily in-place)
+
+```julia
 function Avv!(dir_deriv,p,v)
         v1 = v[1]
         v2 = v[2]
@@ -130,7 +131,7 @@ Typically, if the model to fit outputs `[y_1(x),y_2(x),...,y_m(x)]`, and that th
 Depending on the size of the dataset, the complexity of the model and the desired tolerance in the fit result, it may be worthwhile to use automatic differentiation (e.g. via `Zygote.jl` or `ForwardDiff.jl`) to determine the directional derivative. Although this is potentially less efficient than calculating the directional derivative manually, this additional information will generally lead to more accurate results.
 
 An example of such an implementation is given by:
-```
+```julia
 using LinearAlgebra, Zygote
 
 function Avv!(dir_deriv,p,v)
