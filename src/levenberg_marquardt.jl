@@ -69,6 +69,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
     x_converged = false
     g_converged = false
     iterCt = 0
+    stopped_by_time_limit = false
     x = copy(initial_x)
     delta_x = copy(initial_x)
     a = similar(x)
@@ -219,6 +220,7 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
 
         # Check time_limit; if time_limit=-1 (the default) the condition is false.
         stopped_by_time_limit = (time_limit > 0) && (time() - t0 > time_limit)
+        show_trace && stopped_by_time_limit && println("Stopping due to time limit")
     end
 
     MultivariateOptimizationResults(
