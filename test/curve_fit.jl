@@ -47,6 +47,11 @@ let
     @assert norm(fit.param - [1.0, 2.0]) < 0.05
     @test fit.converged
 
+    # test matrix valued weights ( #161 )
+    weights = LinearAlgebra.diagm(1 ./ yvars)
+    fit_matrixweights = curve_fit(model, xdata, ydata, weights, [0.5, 0.5])
+    @test fit.param == fit_matrixweights.param
+
     # can also get error estimates on the fit parameters
     errors = margin_error(fit, 0.1)
     println("norm(errors - [0.017, 0.075]) < 0.1 ?", norm(errors - [0.017, 0.075]))
