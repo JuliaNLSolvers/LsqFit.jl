@@ -7,28 +7,32 @@ struct LsqFitResult{P, R, J, W <: AbstractArray}
 end
 
 function HDF5.write(parent::Union{HDF5.File,HDF5.Group}, name::AbstractString, fit::LsqFitResult)
-  g = create_group(parent, name)
-  attributes(g)["type"] = "LsqFitResult"
-  attributes(g)["version"] = 1
+    g = create_group(parent, name)
+    attributes(g)["type"] = "LsqFitResult"
+    attributes(g)["version"] = 1
 
-  write(g, "param", fit.param)
-  write(g, "resid", fit.resid)
-  write(g, "jacobian", fit.jacobian)
-  write(g, "converged", fit.converged)
-  write(g, "wt", fit.wt)
+    write(g, "param", fit.param)
+    write(g, "resid", fit.resid)
+    write(g, "jacobian", fit.jacobian)
+    write(g, "converged", fit.converged)
+    write(g, "wt", fit.wt)
 end
 
 function HDF5.read(parent::Union{HDF5.File,HDF5.Group}, name::AbstractString, ::Type{LsqFitResult})
-  g = open_group(parent, name)
-  if read(attributes(g)["type"]) != "LsqFitResult"
+    g = open_group(parent, name)
+    if read(attributes(g)["type"]) != "LsqFitResult"
     error("HDF5 group or file does not contain LsqFitResult data")
-  end
-  param = read(g, "param")
-  resid = read(g, "resid")
-  jacobian = read(g, "jacobian")
-  converged = read(g, "converged")
-  wt = read(g, "wt")
-  return LsqFitResult(param, resid, jacobian, converged, wt)
+    end
+    if read(attributes(g)["version"]) == 1
+        param = read(g, "param")
+        resid = read(g, "resid")
+        jacobian = read(g, "jacobian")
+        converged = read(g, "converged")
+        wt = read(g, "wt")
+        return LsqFitResult(param, resid, jacobian, converged, wt)
+    else
+        error("Found LsqFit data in HDF5 data but the data version is not supported by this version of LsqFit.jl\n Found data version number $(read(attributes(g)["version"]))")
+    end
 end
 
 StatsBase.coef(lfr::LsqFitResult) = lfr.param
