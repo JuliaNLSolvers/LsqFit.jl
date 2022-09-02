@@ -33,7 +33,7 @@ Comp & Applied Math).
 # way to provide an autodiff-made acceleration when someone doesn't provide an `avv`.
 # it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
 function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T};
-    x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000, time_limit::Integer=-1,
+    x_tol::Real = 1e-8, g_tol::Real = 1e-12, maxIter::Integer = 1000, time_limit::Real=NaN,
     lambda = T(10), tau=T(Inf), lambda_increase::Real = 10.0, lambda_decrease::Real = 0.1,
     min_step_quality::Real = 1e-3, good_step_quality::Real = 0.75,
     show_trace::Bool = false, lower::AbstractVector{T} = Array{T}(undef, 0), upper::AbstractVector{T} = Array{T}(undef, 0), avv!::Union{Function,Nothing,Avv} = nothing
@@ -218,9 +218,9 @@ function levenberg_marquardt(df::OnceDifferentiable, initial_x::AbstractVector{T
         end
         converged = g_converged | x_converged
 
-        # Check time_limit; if time_limit=-1 (the default) the condition is false.
+        # Check time_limit; if time_limit=NaN (the default) the condition is false.
         stopped_by_time_limit = (time_limit > 0) && (time() - t0 > time_limit)
-        show_trace && stopped_by_time_limit && println("Stopping due to time limit")
+        show_trace && stopped_by_time_limit && warn("Stopping due to time limit")
     end
 
     MultivariateOptimizationResults(
