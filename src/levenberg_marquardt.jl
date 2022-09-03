@@ -219,7 +219,7 @@ function levenberg_marquardt(
         # show state
         if show_trace
             g_norm = norm(J' * value(df), Inf)
-            d = Dict("g(x)" => g_norm, "dx" => delta_x, "lambda" => lambda)
+            d = Dict("g(x)" => g_norm, "dx" => copy(delta_x), "lambda" => lambda)
             os = LsqFitState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
             println(os)
