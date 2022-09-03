@@ -1,8 +1,9 @@
-struct LsqFitResult{P,R,J,W<:AbstractArray}
+struct LsqFitResult{P,R,J,W<:AbstractArray,T}
     param::P
     resid::R
     jacobian::J
     converged::Bool
+    trace::T
     wt::W
 end
 
@@ -80,7 +81,7 @@ function lmfit(
     results = levenberg_marquardt(R, p0; kwargs...)
     p = results.minimizer
     converged = isconverged(results)
-    return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged, wt)
+    return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged, results.trace, wt)
 end
 
 """

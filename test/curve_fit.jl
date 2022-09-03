@@ -41,10 +41,13 @@ let
         J[:, 2] = -x .* p[1] .* J[:, 1]           #dmodel/dp[2]
         J
     end
-    jacobian_fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
+    jacobian_fit = curve_fit(model, jacobian_model, xdata, ydata, p0;show_trace=true)
     @test norm(jacobian_fit.param - [1.0, 2.0]) < 0.05
     @test jacobian_fit.converged
-
+    @testset "#195" begin
+        @test length(jacobian_fit.trace) > 1
+        @test jacobian_fit.trace[end].metadata["dx"][1] != jacobian_fit.trace[end-1].metadata["dx"][1]
+    end
     # some example data
     yvars = 1e-6 * rand(rng, length(xdata))
     ydata = model(xdata, [1.0, 2.0]) + sqrt.(yvars) .* randn(rng, length(xdata))
