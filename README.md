@@ -67,10 +67,37 @@ fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
 
 Multivariate regression
 -----------------------
-There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification:
+There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification.
 ```julia
-@. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
+using LsqFit
+
+x = collect(range(0, stop=200, length=201))
+y = collect(range(0, stop=200, length=201))
+
+xy = hcat(x, y)
+
+function twoD_Gaussian(xy, p)
+    amplitude, xo, yo, sigma_x, sigma_y, theta, offset = p
+    a = (cos(theta)^2)/(2*sigma_x^2) + (sin(theta)^2)/(2*sigma_y^2)
+    b = -(sin(2*theta))/(4*sigma_x^2) + (sin(2*theta))/(4*sigma_y^2)
+    c = (sin(theta)^2)/(2*sigma_x^2) + (cos(theta)^2)/(2*sigma_y^2)
+
+    # creating linear meshgrid from xy
+    x = xy[:, 1]
+    y = xy[:, 2]
+    g = offset .+ amplitude .* exp.( - (a.*((x .- xo).^2) + 2 .* b .* (x .- xo) .* (y .- yo) + c * ((y .- yo).^2)))
+    return g[:]
+end
+
+p0 = Float64.([3, 100, 100, 20, 40, 0, 10])
+data = twoD_Gaussian(xy, p0)
+
+# Noisy data
+data_noisy = data + 0.2 * randn(size(data))
+
+fit = LsqFit.curve_fit(twoD_Gaussian, xy, data_noisy, p0)
 ```
+
 Evaluating the Jacobian and using automatic differentiation
 -------------------------
 The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying
