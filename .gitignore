@@ -2,3 +2,4 @@ benchmarks/graphs/*
 *~
 *.kate-swp
 Manifest.toml
+test/*.png
