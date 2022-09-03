@@ -1,3 +1,48 @@
+struct LMState{T}
+    iteration::Int
+    value::Float64
+    g_norm::Float64
+    metadata::Dict
+end
+
+function Base.show(io::IO, t::LMState)
+    @printf io "%6d   %14e   %14e\n" t.iteration t.value t.g_norm
+    if !isempty(t.metadata)
+        for (key, value) in t.metadata
+            @printf io " * %s: %s\n" key value
+        end
+    end
+    return
+end
+
+LMTrace{T} = Vector{LMState{T}}
+function Base.show(io::IO, tr::LMTrace)
+    @printf io "Iter     Function value   Gradient norm \n"
+    @printf io "------   --------------   --------------\n"
+    for state in tr
+        show(io, state)
+    end
+    return
+end
+
+struct LMResults{O,T,Tval,N}
+    method::O
+    initial_x::Array{T,N}
+    minimizer::Array{T,N}
+    minimum::Tval
+    iterations::Int
+    iteration_converged::Bool
+    x_converged::Bool
+    g_converged::Bool
+    g_tol::Tval
+    trace::LMTrace{O}
+    f_calls::Int
+    g_calls::Int
+end
+
+minimizer(lsr::LMResults) = lsr.minimizer
+isconverged(lsr::LMResults) = lsr.x_converged || lsr.g_converged
+
 struct LevenbergMarquardt end
 Base.summary(::LevenbergMarquardt) = "Levenberg-Marquardt"
 """
@@ -94,6 +139,7 @@ function levenberg_marquardt(
 
     trial_f = similar(value(df))
     residual = sum(abs2, value(df))
+    Tval = typeof(residual)
 
     # Create buffers
     n = length(x)
@@ -108,10 +154,10 @@ function levenberg_marquardt(
     v = Array{T}(undef, n)
 
     # Maintain a trace of the system.
-    tr = LsqFitTrace{LevenbergMarquardt}()
+    tr = LMTrace{LevenbergMarquardt}()
     if show_trace
         d = Dict("lambda" => lambda)
-        os = LsqFitState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
+        os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
         push!(tr, os)
         println(os)
     end
@@ -220,7 +266,7 @@ function levenberg_marquardt(
         if show_trace
             g_norm = norm(J' * value(df), Inf)
             d = Dict("g(x)" => g_norm, "dx" => copy(delta_x), "lambda" => lambda)
-            os = LsqFitState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
+            os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
             println(os)
         end
@@ -237,18 +283,18 @@ function levenberg_marquardt(
         converged = g_converged | x_converged
     end
 
-    LsqFitResults(
-        LevenbergMarquardt(),    # method
+    LMResults(
+        LevenbergMarquardt(),  # method
         initial_x,             # initial_x
         x,                     # minimizer
-        sum(abs2, value(df)),       # minimum
+        sum(abs2, value(df)),  # minimum
         iterCt,                # iterations
         !converged,            # iteration_converged
         x_converged,           # x_converged
         g_converged,           # g_converged
-        g_tol,                  # g_tol
+        Tval(g_tol),              # g_tol
         tr,                    # trace
-        first(df.f_calls),               # f_calls
-        first(df.df_calls),               # g_calls
+        first(df.f_calls),     # f_calls
+        first(df.df_calls),    # g_calls
     )
 end
