@@ -3,9 +3,10 @@
 #
 using LsqFit, Test, LinearAlgebra, Random
 using OptimBase
+using Plots
 import NLSolversBase: OnceDifferentiable
 
-my_tests = ["curve_fit.jl", "levenberg_marquardt.jl", "curve_fit_inplace.jl", "geodesic.jl"]
+my_tests = ["curve_fit.jl", "levenberg_marquardt.jl", "curve_fit_inplace.jl", "geodesic.jl", "plotting.jl"]
 
 println("Running tests:")
 
