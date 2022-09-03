@@ -14,6 +14,7 @@ StatsBase.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
 StatsBase.weights(lfr::LsqFitResult) = lfr.wt
 StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr) / dof(lfr)
+isconverged(lsr::LsqFitResult) = lsr.converged
 
 function check_data_health(xdata, ydata)
     if any(ismissing, xdata) || any(ismissing, ydata)
