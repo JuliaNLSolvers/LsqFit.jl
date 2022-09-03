@@ -98,3 +98,15 @@ let
 
     curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau = 0.0001)
 end
+
+@testset "#167" begin
+    x = collect(1:10)
+    y = copy(x)
+    @. model(x, p) = p[1] * x + p[2]
+    p0 = [0.0, -5.0]
+    fit = curve_fit(model, x, y, p0) # no bounds
+    fit_bounded = curve_fit(model, x, y, p0; upper = [+Inf, -5.0]) # with bounds
+    @test coef(fit)[1] < coef(fit_bounded)[1]
+    @test coef(fit)[1] ≈ 1
+    @test coef(fit_bounded)[1] ≈ 1.22727271
+end
