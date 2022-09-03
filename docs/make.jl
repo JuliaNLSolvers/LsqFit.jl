@@ -16,6 +16,8 @@ makedocs(
 deploydocs(
     repo = "github.com/JuliaNLSolvers/LsqFit.jl.git",
     target = "build",
+    devurl = "dev",
+    versions = ["stable" => "v^", "v#.#", devurl => devurl],
     deps = nothing,
     make = nothing,
 )
