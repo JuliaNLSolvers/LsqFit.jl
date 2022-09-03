@@ -1,4 +1,4 @@
-struct LsqFitResult{P, R, J, W <: AbstractArray}
+struct LsqFitResult{P,R,J,W<:AbstractArray}
     param::P
     resid::R
     jacobian::J
@@ -6,14 +6,13 @@ struct LsqFitResult{P, R, J, W <: AbstractArray}
     wt::W
 end
 
-
 StatsBase.coef(lfr::LsqFitResult) = lfr.param
 StatsBase.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
 StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
 StatsBase.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
 StatsBase.weights(lfr::LsqFitResult) = lfr.wt
 StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
-mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
+mse(lfr::LsqFitResult) = rss(lfr) / dof(lfr)
 
 function check_data_health(xdata, ydata)
     if any(ismissing, xdata) || any(ismissing, ydata)
@@ -27,7 +26,7 @@ end
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, copy(r); inplace=false)
+    R = OnceDifferentiable(f, g, p0, copy(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -38,7 +37,14 @@ function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; k
 end
 
 #for inplace f only
-function lmfit(f, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(
+    f,
+    p0::AbstractArray,
+    wt::AbstractArray,
+    r::AbstractArray;
+    autodiff = :finite,
+    kwargs...,
+)
     R = OnceDifferentiable(f, p0, copy(r); inplace = true, autodiff = autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
@@ -64,10 +70,17 @@ function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwar
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(R::OnceDifferentiable, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(
+    R::OnceDifferentiable,
+    p0::AbstractArray,
+    wt::AbstractArray;
+    autodiff = :finite,
+    kwargs...,
+)
     results = levenberg_marquardt(R, p0; kwargs...)
-    p = minimizer(results)
-    return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged(results), wt)
+    p = results.minimizer
+    converged = isconverged(results)
+    return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged, wt)
 end
 
 """
@@ -105,13 +118,20 @@ fit = curve_fit(model, xdata, ydata, p0)
 """
 function curve_fit end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+function curve_fit(
+    model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    p0::AbstractArray;
+    inplace = false,
+    kwargs...,
+)
     check_data_health(xdata, ydata)
     # construct the cost function
     T = eltype(ydata)
 
     if inplace
-        f! = (F,p)  -> (model(F,xdata,p); @. F = F - ydata)
+        f! = (F, p) -> (model(F, xdata, p); @. F = F - ydata)
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
         f = (p) -> model(xdata, p) - ydata
@@ -119,15 +139,22 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, p0::Abstra
     end
 end
 
-function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+function curve_fit(
+    model,
+    jacobian_model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    p0::AbstractArray;
+    inplace = false,
+    kwargs...,
+)
     check_data_health(xdata, ydata)
 
     T = eltype(ydata)
 
     if inplace
-        f! = (F,p) -> (model(F,xdata,p); @. F = F - ydata)
-        g! = (G,p)  -> jacobian_model(G, xdata, p)
+        f! = (F, p) -> (model(F, xdata, p); @. F = F - ydata)
+        g! = (G, p) -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], copy(ydata); kwargs...)
     else
         f = (p) -> model(xdata, p) - ydata
@@ -136,38 +163,61 @@ function curve_fit(model, jacobian_model,
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+function curve_fit(
+    model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    wt::AbstractArray,
+    p0::AbstractArray;
+    inplace = false,
+    kwargs...,
+)
     check_data_health(xdata, ydata)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
-        f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
+        f! = (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
     else
-        f = (p)  -> u .* ( model(xdata, p) - ydata )
-        lmfit(f,p0,wt; kwargs...)
+        f = (p) -> u .* (model(xdata, p) - ydata)
+        lmfit(f, p0, wt; kwargs...)
     end
 end
 
-function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractArray, p0::AbstractArray; inplace = false, kwargs...)
+function curve_fit(
+    model,
+    jacobian_model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    wt::AbstractArray,
+    p0::AbstractArray;
+    inplace = false,
+    kwargs...,
+)
     check_data_health(xdata, ydata)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
-        f! = (F,p) -> (model(F,xdata,p); @. F = u*(F - ydata))
-        g! = (G,p) -> (jacobian_model(G, xdata, p); @. G = u*G )
+        f! = (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
+        g! = (G, p) -> (jacobian_model(G, xdata, p); @. G = u * G)
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     else
-        f = (p) -> u .* ( model(xdata, p) - ydata )
-        g = (p) -> u .* ( jacobian_model(xdata, p) )
+        f = (p) -> u .* (model(xdata, p) - ydata)
+        g = (p) -> u .* (jacobian_model(xdata, p))
         lmfit(f, g, p0, wt; kwargs...)
     end
 end
 
-function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::AbstractMatrix, p0::AbstractArray; kwargs...)
+function curve_fit(
+    model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    wt::AbstractMatrix,
+    p0::AbstractArray;
+    kwargs...,
+)
     check_data_health(xdata, ydata)
 
     # as before, construct a weighted cost function with where this
@@ -179,18 +229,25 @@ function curve_fit(model, xdata::AbstractArray, ydata::AbstractArray, wt::Abstra
     # This requires the matrix to be positive definite
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xdata, p) - ydata )
-    lmfit(f,p0,wt; kwargs...)
+    f(p) = u * (model(xdata, p) - ydata)
+    lmfit(f, p0, wt; kwargs...)
 end
 
-function curve_fit(model, jacobian_model,
-            xdata::AbstractArray, ydata::AbstractArray, wt::AbstractMatrix, p0::AbstractArray; kwargs...)
+function curve_fit(
+    model,
+    jacobian_model,
+    xdata::AbstractArray,
+    ydata::AbstractArray,
+    wt::AbstractMatrix,
+    p0::AbstractArray;
+    kwargs...,
+)
     check_data_health(xdata, ydata)
 
     u = cholesky(wt).U
 
-    f(p) = u * ( model(xdata, p) - ydata )
-    g(p) = u * ( jacobian_model(xdata, p) )
+    f(p) = u * (model(xdata, p) - ydata)
+    g(p) = u * (jacobian_model(xdata, p))
     lmfit(f, g, p0, wt; kwargs...)
 end
 
@@ -204,15 +261,15 @@ function estimate_covar(fit::LsqFitResult)
         # compute the covariance matrix from the QR decomposition
         Q, R = qr(J)
         Rinv = inv(R)
-        covar = Rinv*Rinv'*mse(fit)
+        covar = Rinv * Rinv' * mse(fit)
     else
-        covar = inv(J'*J)
+        covar = inv(J' * J)
     end
 
     return covar
 end
 
-function StatsBase.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function StatsBase.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
@@ -220,36 +277,52 @@ function StatsBase.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     covar = estimate_covar(fit)
     # then the standard errors are given by the sqrt of the diagonal
     vars = diag(covar)
-    vratio = minimum(vars)/maximum(vars)
-    if !isapprox(vratio, 0.0, atol=atol, rtol=isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol) && vratio < 0.0
+    vratio = minimum(vars) / maximum(vars)
+    if !isapprox(
+        vratio,
+        0.0,
+        atol = atol,
+        rtol = isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol,
+    ) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
     return sqrt.(abs.(vars))
 end
 
-function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
     # computes margin of error at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol=rtol, atol=atol)
+    std_errors = stderror(fit; rtol = rtol, atol = atol)
     dist = TDist(dof(fit))
-    critical_values = quantile(dist, 1 - alpha/2)
+    critical_values = quantile(dist, 1 - alpha / 2)
     # scale standard errors by quantile of the student-t distribution (critical values)
     return std_errors * critical_values
 end
 
-function confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+function confidence_interval(
+    fit::LsqFitResult,
+    alpha = 0.05;
+    rtol::Real = NaN,
+    atol::Real = 0,
+)
     # computes confidence intervals at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol=rtol, atol=atol)
-    margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
-    confidence_intervals = collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
+    std_errors = stderror(fit; rtol = rtol, atol = atol)
+    margin_of_errors = margin_error(fit, alpha; rtol = rtol, atol = atol)
+    confidence_intervals =
+        collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
 
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
-@deprecate estimate_errors(fit::LsqFitResult, confidence=0.95; rtol::Real=NaN, atol::Real=0) margin_error(fit, 1-confidence; rtol=rtol, atol=atol)
+@deprecate estimate_errors(
+    fit::LsqFitResult,
+    confidence = 0.95;
+    rtol::Real = NaN,
+    atol::Real = 0,
+) margin_error(fit, 1 - confidence; rtol = rtol, atol = atol)
