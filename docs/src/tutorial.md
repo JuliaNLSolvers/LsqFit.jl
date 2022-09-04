@@ -391,6 +391,33 @@ julia> fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
 julia> cov = estimate_covar(fit_WLS)
 ```
 
+## Visualization
+A `Plots.jl` plot recipe is provided for visualizing a fit. The simplest case
+is plotting just the fit curve by itself, which can be done by supplying the
+model and the fit object to a `plot` call:
+```julia
+plot(m, fit)
+```
+
+The plot recipe can also show the confidence and prediction intervals by
+supplying the `purpose` keyword (default `:neither`):
+```julia
+plot(
+    plot(m, fit; purpose=:neither),
+    plot(m, fit; purpose=:prediction),
+    plot(m, fit; purpose=:confidence),
+    plot(m, fit; purpose=:both),
+    ;
+    layout=(2,2),
+)
+```
+
+![Plots with different intervals marked.](./img/plots.png)
+
+Changing the keyword `significance` (default `0.05`) changes which confidence
+is being illustrated.
+
+
 ## References
 Hansen, P. C., Pereyra, V. and Scherer, G. (2013) Least squares data fitting with applications. Baltimore, Md: Johns Hopkins University Press, p. 147-155.
 
