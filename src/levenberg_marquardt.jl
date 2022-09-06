@@ -62,6 +62,7 @@ Comp & Applied Math).
 * `x_tol::Real=1e-8`: search tolerance in x
 * `g_tol::Real=1e-12`: search tolerance in gradient
 * `maxIter::Integer=1000`: maximum number of iterations
+* `time_limit::Integer=-1`: maximum running time in seconds (-1 for no limit)
 * `min_step_quality=1e-3`: for steps below this quality, the trust region is shrinked
 * `good_step_quality=0.75`: for steps above this quality, the trust region is expanded
 * `lambda::Real=10`: (inverse of) initial trust region radius
@@ -76,12 +77,14 @@ Comp & Applied Math).
 # and the like. This way we could not only merge the two functions, but also have a convenient
 # way to provide an autodiff-made acceleration when someone doesn't provide an `avv`.
 # it would probably be very inefficient performace-wise for most cases, but it wouldn't hurt to have it somewhere
+
 function levenberg_marquardt(
     df::OnceDifferentiable,
     initial_x::AbstractVector{T};
     x_tol::Real = 1e-8,
     g_tol::Real = 1e-12,
     maxIter::Integer = 1000,
+    time_limit::Real=NaN,
     lambda = T(10),
     tau = T(Inf),
     lambda_increase::Real = 10.0,
@@ -93,6 +96,8 @@ function levenberg_marquardt(
     upper::AbstractVector{T} = Array{T}(undef, 0),
     avv!::Union{Function,Nothing,Avv} = nothing,
 ) where {T}
+
+    t0 = time() # Initial time stamp used to control early stopping by time_limit
 
     # First evaluation
     value_jacobian!!(df, initial_x)
@@ -133,6 +138,7 @@ function levenberg_marquardt(
     x_converged = false
     g_converged = false
     iterCt = 0
+    stopped_by_time_limit = false
     x = copy(initial_x)
     delta_x = copy(initial_x)
     a = similar(x)
@@ -162,7 +168,7 @@ function levenberg_marquardt(
         println(os)
     end
 
-    while (~converged && iterCt < maxIter)
+    while (~converged && ~stopped_by_time_limit && iterCt < maxIter)
         # jacobian! will check if x is new or not, so it is only actually
         # evaluated if x was updated last iteration.
         jacobian!(df, x) # has alias J
@@ -281,6 +287,10 @@ function levenberg_marquardt(
             x_converged = true
         end
         converged = g_converged | x_converged
+
+        # Check time_limit; if time_limit=NaN (the default) the condition is false.
+        stopped_by_time_limit = (time_limit > 0) && (time() - t0 > time_limit)
+        show_trace && stopped_by_time_limit && warn("Stopping due to time limit")
     end
 
     LMResults(
