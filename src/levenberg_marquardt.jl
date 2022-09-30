@@ -209,14 +209,10 @@ function levenberg_marquardt(
 
         # apply box constraints
         if !isempty(lower)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = max(x[i] + delta_x[i], lower[i]) - x[i]
-            end
+            copyto!(delta_x, max.(x .+ delta_x, lower) .- x)
         end
         if !isempty(upper)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = min(x[i] + delta_x[i], upper[i]) - x[i]
-            end
+            copyto!(delta_x, min.(x .+ delta_x, upper) .- x)
         end
 
         # if the linear assumption is valid, our new residual should be:
