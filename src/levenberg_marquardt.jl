@@ -27,8 +27,8 @@ end
 
 struct LMResults{O,T,Tval,N}
     method::O
-    initial_x::Array{T,N}
-    minimizer::Array{T,N}
+    initial_x::AbstractArray{T,N}
+    minimizer::AbstractArray{T,N}
     minimum::Tval
     iterations::Int
     iteration_converged::Bool
@@ -144,14 +144,14 @@ function levenberg_marquardt(
     # Create buffers
     n = length(x)
     m = length(value(df))
-    JJ = Matrix{T}(undef, n, n)
-    n_buffer = Vector{T}(undef, n)
+    JJ = similar(value(df), T, n, n)
+    n_buffer = similar(value(df), T, n)
     Jdelta_buffer = similar(value(df))
 
     # and an alias for the jacobian
     J = jacobian(df)
-    dir_deriv = Array{T}(undef, m)
-    v = Array{T}(undef, n)
+    dir_deriv = similar(value(df), T, m)
+    v = similar(value(df), T, n)
 
     # Maintain a trace of the system.
     tr = LMTrace{LevenbergMarquardt}()
@@ -176,17 +176,12 @@ function levenberg_marquardt(
         # prevent "parameter evaporation".
 
         DtD = vec(sum(abs2, J, dims = 1))
-        for i = 1:length(DtD)
-            if DtD[i] <= MIN_DIAGONAL
-                DtD[i] = MIN_DIAGONAL
-            end
-        end
+        DtD_mask = DtD .<= MIN_DIAGONAL
+        DtD[DtD_mask] .= MIN_DIAGONAL
 
         # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*value(df) )
         mul!(JJ, transpose(J), J)
-        @simd for i = 1:n
-            @inbounds JJ[i, i] += lambda * DtD[i]
-        end
+        JJ[diagind(JJ)] .+= lambda * DtD
         #n_buffer is delta C, JJ is g compared to Mark's code
         mul!(n_buffer, transpose(J), value(df))
         rmul!(n_buffer, -1)
@@ -214,14 +209,10 @@ function levenberg_marquardt(
 
         # apply box constraints
         if !isempty(lower)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = max(x[i] + delta_x[i], lower[i]) - x[i]
-            end
+            copyto!(delta_x, max.(x .+ delta_x, lower) .- x)
         end
         if !isempty(upper)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = min(x[i] + delta_x[i], upper[i]) - x[i]
-            end
+            copyto!(delta_x, min.(x .+ delta_x, upper) .- x)
         end
 
         # if the linear assumption is valid, our new residual should be:

@@ -20,6 +20,7 @@ using Distributions
 using LinearAlgebra
 using ForwardDiff
 using Printf
+using ArrayInterfaceCUDA
 
 import NLSolversBase:
     value, value!, jacobian, jacobian!, value_jacobian!!, OnceDifferentiable
