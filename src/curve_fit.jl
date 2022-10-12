@@ -1,4 +1,4 @@
-struct LsqFitResult{P,R,J,W<:AbstractArray,T}
+struct LsqFitResult{P,R,J,W <: AbstractArray,T}
     param::P
     resid::R
     jacobian::J
@@ -28,30 +28,30 @@ end
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, copy(r); inplace = false)
+    R = OnceDifferentiable(f, g, p0, copy(r); inplace=false)
     lmfit(R, p0, wt; kwargs...)
 end
 
-#for inplace f and inplace g
+# for inplace f and inplace g
 function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
-    R = OnceDifferentiable(f!, g!, p0, copy(r); inplace = true)
+    R = OnceDifferentiable(f!, g!, p0, copy(r); inplace=true)
     lmfit(R, p0, wt; kwargs...)
 end
 
-#for inplace f only
+# for inplace f only
 function lmfit(
     f,
     p0::AbstractArray,
     wt::AbstractArray,
     r::AbstractArray;
-    autodiff = :finite,
+    autodiff=:finite,
     kwargs...,
 )
-    R = OnceDifferentiable(f, p0, copy(r); inplace = true, autodiff = autodiff)
+    R = OnceDifferentiable(f, p0, copy(r); inplace=true, autodiff=autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwargs...)
+function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff=:finite, kwargs...)
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
@@ -68,7 +68,7 @@ function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff = :finite, kwar
     # construct Jacobian function, which uses finite difference method
     r = f(p0)
     autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f, p0, copy(r); inplace = false, autodiff = autodiff)
+    R = OnceDifferentiable(f, p0, copy(r); inplace=false, autodiff=autodiff)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -76,7 +76,7 @@ function lmfit(
     R::OnceDifferentiable,
     p0::AbstractArray,
     wt::AbstractArray;
-    autodiff = :finite,
+    autodiff=:finite,
     kwargs...,
 )
     results = levenberg_marquardt(R, p0; kwargs...)
@@ -125,7 +125,7 @@ function curve_fit(
     xdata::AbstractArray,
     ydata::AbstractArray,
     p0::AbstractArray;
-    inplace = false,
+    inplace=false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -147,7 +147,7 @@ function curve_fit(
     xdata::AbstractArray,
     ydata::AbstractArray,
     p0::AbstractArray;
-    inplace = false,
+    inplace=false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -171,7 +171,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractArray,
     p0::AbstractArray;
-    inplace = false,
+    inplace=false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -195,7 +195,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractArray,
     p0::AbstractArray;
-    inplace = false,
+    inplace=false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -271,7 +271,7 @@ function estimate_covar(fit::LsqFitResult)
     return covar
 end
 
-function StatsBase.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
+function StatsBase.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
@@ -283,21 +283,21 @@ function StatsBase.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
     if !isapprox(
         vratio,
         0.0,
-        atol = atol,
-        rtol = isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol,
+        atol=atol,
+        rtol=isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol,
     ) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
     return sqrt.(abs.(vars))
 end
 
-function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
+function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
     # computes margin of error at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol = rtol, atol = atol)
+    std_errors = stderror(fit; rtol=rtol, atol=atol)
     dist = TDist(dof(fit))
     critical_values = quantile(dist, 1 - alpha / 2)
     # scale standard errors by quantile of the student-t distribution (critical values)
@@ -306,17 +306,17 @@ end
 
 function confidence_interval(
     fit::LsqFitResult,
-    alpha = 0.05;
-    rtol::Real = NaN,
-    atol::Real = 0,
+    alpha=0.05;
+    rtol::Real=NaN,
+    atol::Real=0,
 )
     # computes confidence intervals at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol = rtol, atol = atol)
-    margin_of_errors = margin_error(fit, alpha; rtol = rtol, atol = atol)
+    std_errors = stderror(fit; rtol=rtol, atol=atol)
+    margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
     confidence_intervals =
         collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
@@ -324,7 +324,7 @@ end
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
 @deprecate estimate_errors(
     fit::LsqFitResult,
-    confidence = 0.95;
-    rtol::Real = NaN,
-    atol::Real = 0,
-) margin_error(fit, 1 - confidence; rtol = rtol, atol = atol)
+    confidence=0.95;
+    rtol::Real=NaN,
+    atol::Real=0,
+) margin_error(fit, 1 - confidence; rtol=rtol, atol=atol)

@@ -79,19 +79,21 @@ Comp & Applied Math).
 function levenberg_marquardt(
     df::OnceDifferentiable,
     initial_x::AbstractVector{T};
-    x_tol::Real = 1e-8,
-    g_tol::Real = 1e-12,
-    maxIter::Integer = 1000,
-    lambda = T(10),
-    tau = T(Inf),
-    lambda_increase::Real = 10.0,
-    lambda_decrease::Real = 0.1,
-    min_step_quality::Real = 1e-3,
-    good_step_quality::Real = 0.75,
-    show_trace::Bool = false,
-    lower::AbstractVector{T} = Array{T}(undef, 0),
-    upper::AbstractVector{T} = Array{T}(undef, 0),
-    avv!::Union{Function,Nothing,Avv} = nothing,
+    x_tol::Real=1e-8,
+    g_tol::Real=1e-12,
+    maxIter::Integer=1000,
+    maxTime::Float64=Inf,
+    lambda=T(10),
+    tau=T(Inf),
+    lambda_increase::Real=10.0,
+    lambda_decrease::Real=0.1,
+    min_step_quality::Real=1e-3,
+    good_step_quality::Real=0.75,
+    show_trace::Bool=false,
+    store_trace::Bool=false,
+    lower::AbstractVector{T}=Array{T}(undef, 0),
+    upper::AbstractVector{T}=Array{T}(undef, 0),
+    avv!::Union{Function,Nothing,Avv}=nothing,
 ) where {T}
 
     # First evaluation
@@ -155,14 +157,18 @@ function levenberg_marquardt(
 
     # Maintain a trace of the system.
     tr = LMTrace{LevenbergMarquardt}()
-    if show_trace
+    if show_trace || store_trace
         d = Dict("lambda" => lambda)
         os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
         push!(tr, os)
-        println(os)
+        if show_trace
+            println(os)
+        end
     end
 
-    while (~converged && iterCt < maxIter)
+    startTime = time()
+
+    while (~converged && iterCt < maxIter && maxTime > time() - startTime)
         # jacobian! will check if x is new or not, so it is only actually
         # evaluated if x was updated last iteration.
         jacobian!(df, x) # has alias J
@@ -175,7 +181,7 @@ function levenberg_marquardt(
         # It is additionally useful to bound the elements of DtD below to help
         # prevent "parameter evaporation".
 
-        DtD = vec(sum(abs2, J, dims = 1))
+        DtD = vec(sum(abs2, J, dims=1))
         for i = 1:length(DtD)
             if DtD[i] <= MIN_DIAGONAL
                 DtD[i] = MIN_DIAGONAL
@@ -187,7 +193,7 @@ function levenberg_marquardt(
         @simd for i = 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
-        #n_buffer is delta C, JJ is g compared to Mark's code
+        # n_buffer is delta C, JJ is g compared to Mark's code
         mul!(n_buffer, transpose(J), value(df))
         rmul!(n_buffer, -1)
 
@@ -195,15 +201,15 @@ function levenberg_marquardt(
 
 
         if avv! != nothing
-            #GEODESIC ACCELERATION PART
+            # GEODESIC ACCELERATION PART
             avv!(dir_deriv, x, v)
             mul!(a, transpose(J), dir_deriv)
-            rmul!(a, -1) #we multiply by -1 before the decomposition/division
-            LAPACK.potrf!('U', JJ) #in place cholesky decomposition
-            LAPACK.potrs!('U', JJ, a) #divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
+            rmul!(a, -1) # we multiply by -1 before the decomposition/division
+            LAPACK.potrf!('U', JJ) # in place cholesky decomposition
+            LAPACK.potrs!('U', JJ, a) # divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
             rmul!(a, 0.5)
             delta_x .= v .+ a
-            #end of the GEODESIC ACCELERATION PART
+            # end of the GEODESIC ACCELERATION PART
         else
             delta_x = v
         end
@@ -263,12 +269,14 @@ function levenberg_marquardt(
         iterCt += 1
 
         # show state
-        if show_trace
+        if show_trace || store_trace
             g_norm = norm(J' * value(df), Inf)
             d = Dict("g(x)" => g_norm, "dx" => copy(delta_x), "lambda" => lambda)
             os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
-            println(os)
+            if show_trace
+                println(os)
+            end
         end
 
         # check convergence criteria:
