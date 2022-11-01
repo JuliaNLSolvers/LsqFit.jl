@@ -244,7 +244,7 @@ function levenberg_marquardt(
 
         # Check time_limit; if time_limit=NaN (the default) the condition is false.
         stopped_by_time_limit = (time_limit > 0) && (time() - t0 > time_limit)
-        show_trace && stopped_by_time_limit && warn("Stopping due to time limit")
+        show_trace && stopped_by_time_limit #&& warn("Stopping due to time limit")
     end
 
     LsqFitResults(
