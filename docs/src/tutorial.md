@@ -186,10 +186,10 @@ In `LsqFit.jl`, the covariance matrix calculation uses QR decomposition to [be m
 \mathbf{Cov}(\boldsymbol{\gamma}^*) = \hat{\sigma}^2 \mathrm{R}^{-1}(\mathrm{R}^{-1})'
 ```
 
-`estimate_covar()` computes the covariance matrix of fit:
+`vcov()` computes the covariance matrix of fit:
 
 ```Julia
-julia> cov = estimate_covar(fit)
+julia> cov = vcov(fit)
 2×2 Array{Float64,2}:
  0.000116545  0.000174633
  0.000174633  0.00258261
@@ -213,10 +213,10 @@ julia> margin_of_error = margin_error(fit, 0.1)
  0.0902435
 ```
 
-`confidence_interval()` returns the confidence interval of each parameter at certain significance level, which is essentially the estimate value ± margin of error. To get the confidence interval at 10% significance level, run:
+`confint()` returns the confidence interval of each parameter at certain significance level, which is essentially the estimate value ± margin of error. To get the confidence interval at 10% significance level, run:
 
 ```Julia
-julia> confidence_intervals = confidence_interval(fit, 0.1)
+julia> confidence_intervals = confint(fit; level=0.9)
 2-element Array{Tuple{Float64,Float64},1}:
  (0.976316, 1.01613)
  (1.91047, 2.09096)
@@ -352,7 +352,7 @@ Pass the vector of `1 ./ var(ε)` or the matrix `inv(covar(ε))` as the weight p
 ```Julia
 julia> wt = inv(cov_ε)
 julia> fit = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = estimate_covar(fit)
+julia> cov = vcov(fit)
 ```
 
 !!! note
@@ -372,7 +372,7 @@ Pass the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function 
 ```Julia
 julia> wt = 1 ./ yvar
 julia> fit = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = estimate_covar(fit)
+julia> cov = vcov(fit)
 ```
 
 ## Estimate the Optimal Weight
@@ -388,7 +388,7 @@ Unweighted fitting (OLS) will return the residuals we need, since the estimator 
 julia> fit_OLS = curve_fit(m, tdata, ydata, p0)
 julia> wt = 1 ./ fit_OLS.resid
 julia> fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = estimate_covar(fit_WLS)
+julia> cov = vcov(fit_WLS)
 ```
 
 ## References

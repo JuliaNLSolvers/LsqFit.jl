@@ -2,29 +2,29 @@ module LsqFit
 
 export curve_fit,
     margin_error,
-    confidence_interval,
-    estimate_covar,
     make_hessian,
     Avv,
-    # StatsBase reexports
+    # StatsAPI reexports
     dof,
     coef,
+    confint,
     nobs,
     mse,
     rss,
     stderror,
     weights,
-    residuals
+    residuals,
+    vcov
 
 using Distributions
 using LinearAlgebra
 using ForwardDiff
 using Printf
+using StatsAPI
 
 import NLSolversBase:
     value, value!, jacobian, jacobian!, value_jacobian!!, OnceDifferentiable
-import StatsBase
-import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
+using StatsAPI: coef, confint, dof, nobs, rss, stderror, weights, residuals, vcov
 
 import Base.summary
 

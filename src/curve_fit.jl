@@ -7,12 +7,12 @@ struct LsqFitResult{P,R,J,W <: AbstractArray,T}
     wt::W
 end
 
-StatsBase.coef(lfr::LsqFitResult) = lfr.param
-StatsBase.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
-StatsBase.nobs(lfr::LsqFitResult) = length(lfr.resid)
-StatsBase.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
-StatsBase.weights(lfr::LsqFitResult) = lfr.wt
-StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
+StatsAPI.coef(lfr::LsqFitResult) = lfr.param
+StatsAPI.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
+StatsAPI.nobs(lfr::LsqFitResult) = length(lfr.resid)
+StatsAPI.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
+StatsAPI.weights(lfr::LsqFitResult) = lfr.wt
+StatsAPI.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr) / dof(lfr)
 isconverged(lsr::LsqFitResult) = lsr.converged
 
@@ -253,7 +253,7 @@ function curve_fit(
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function estimate_covar(fit::LsqFitResult)
+function StatsAPI.vcov(fit::LsqFitResult)
     # computes covariance matrix of fit parameters
     J = fit.jacobian
 
@@ -271,12 +271,12 @@ function estimate_covar(fit::LsqFitResult)
     return covar
 end
 
-function StatsBase.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function StatsAPI.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    covar = estimate_covar(fit)
+    covar = vcov(fit)
     # then the standard errors are given by the sqrt of the diagonal
     vars = diag(covar)
     vratio = minimum(vars) / maximum(vars)
@@ -304,24 +304,24 @@ function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=
     return std_errors * critical_values
 end
 
-function confidence_interval(
-    fit::LsqFitResult,
-    alpha=0.05;
-    rtol::Real=NaN,
-    atol::Real=0,
-)
+function StatsAPI.confint(fit::LsqFitResult; level=0.95, rtol::Real=NaN, atol::Real=0)
     # computes confidence intervals at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
-    #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
+    #   level : confidence level
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     std_errors = stderror(fit; rtol=rtol, atol=atol)
-    margin_of_errors = margin_error(fit, alpha; rtol=rtol, atol=atol)
-    confidence_intervals =
-        collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
+    margin_of_errors = margin_error(fit, 1 - level; rtol=rtol, atol=atol)
+    return collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
 
+@deprecate(confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0),
+           confint(fit; level=(1 - alpha), rtol=rtol, atol=atol))
+
+@deprecate estimate_covar(fit::LsqFitResult) vcov(fit)
+
 @deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
+
 @deprecate estimate_errors(
     fit::LsqFitResult,
     confidence=0.95;
