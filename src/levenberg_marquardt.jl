@@ -27,8 +27,8 @@ end
 
 struct LMResults{O,T,Tval,N}
     method::O
-    initial_x::Array{T,N}
-    minimizer::Array{T,N}
+    initial_x::AbstractArray{T,N}
+    minimizer::AbstractArray{T,N}
     minimum::Tval
     iterations::Int
     iteration_converged::Bool
@@ -146,8 +146,8 @@ function levenberg_marquardt(
     # Create buffers
     n = length(x)
     m = length(value(df))
-    JJ = Matrix{T}(undef, n, n)
-    n_buffer = Vector{T}(undef, n)
+    JJ = transpose(jacobian(df))*jacobian(df)
+    n_buffer = similar(x)
     Jdelta_buffer = similar(value(df))
 
     # and an alias for the jacobian
