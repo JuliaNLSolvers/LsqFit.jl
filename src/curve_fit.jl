@@ -258,8 +258,6 @@ function StatsAPI.vcov(fit::LsqFitResult)
     J = fit.jacobian
 
     if isempty(fit.wt)
-        r = fit.resid
-
         # compute the covariance matrix from the QR decomposition (J = QR):
         # => inv(J' J) = inv(J) * inv(J')
         #              = inv(QR) * inv(R'Q')
