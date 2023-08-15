@@ -25,10 +25,10 @@ function Base.show(io::IO, tr::LMTrace)
     return
 end
 
-struct LMResults{O,T,Tval,N}
+struct LMResults{O,T,Tval,N,Arr<:AbstractArray{T, N}}
     method::O
-    initial_x::AbstractArray{T,N}
-    minimizer::AbstractArray{T,N}
+    initial_x::Arr
+    minimizer::Arr
     minimum::Tval
     iterations::Int
     iteration_converged::Bool
