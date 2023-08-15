@@ -265,7 +265,7 @@ function StatsAPI.vcov(fit::LsqFitResult)
         Rinv = inv(R)
         covar = Rinv * Rinv' * mse(fit)
     else
-        covar = inv(J' * J)
+        covar = inv(J' * fit.wt * J)
     end
 
     return covar
