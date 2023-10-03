@@ -299,7 +299,7 @@ function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     std_errors = stderror(fit; rtol=rtol, atol=atol)
     dist = TDist(dof(fit))
-    critical_values = eltype(coef(ft))(quantile(dist, Float64(1 - alpha / 2)))
+    critical_values = eltype(coef(fit))(quantile(dist, Float64(1 - alpha / 2)))
     # scale standard errors by quantile of the student-t distribution (critical values)
     return std_errors * critical_values
 end
