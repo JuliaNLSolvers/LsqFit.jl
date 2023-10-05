@@ -1,3 +1,8 @@
 benchmarks/graphs/*
 *~
 *.kate-swp
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+/docs/build/
+Manifest.toml

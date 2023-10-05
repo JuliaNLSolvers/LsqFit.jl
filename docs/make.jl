@@ -4,7 +4,7 @@ makedocs(
     format = Documenter.HTML(prettyurls = true, canonical="https://julianlsolvers.github.io/LsqFit.jl/stable/"),
     sitename = "LsqFit.jl",
     doctest = false,
-    strict = false,
+    warnonly = true,
     pages = Any[
             "Home" => "index.md",
             "Getting Started" => "getting_started.md",
