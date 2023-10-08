@@ -46,10 +46,10 @@ julia> param = fit.param
  2.0735
 ```
 
-`LsqFit.jl` also provides functions to examinep0 = [0.5, 0.5] the goodness of fit. `estimate_covar(fit)` computes the estimated covariance matrix.
+`LsqFit.jl` also provides functions to examinep0 = [0.5, 0.5] the goodness of fit. `vcov(fit)` computes the estimated covariance matrix.
 
 ```Julia
-julia> cov = estimate_covar(fit)
+julia> cov = vcov(fit)
 2×2 Array{Float64,2}:
  0.000116545  0.000174633
  0.000174633  0.00258261
@@ -64,10 +64,10 @@ julia> se = stderror(fit)
  0.0508193
 ```
 
-To get the confidence interval at 10% significance level, run `confidence_interval(fit, alpha)`, which essentially computes `the estimate parameter value` ± (`standard error` * `critical value from t-distribution`).
+To get the confidence interval at 10% significance level, run `confint(fit; level=0.9)`, which essentially computes `the estimate parameter value` ± (`standard error` * `critical value from t-distribution`).
 
 ```Julia
-julia> confidence_interval = confidence_interval(fit, 0.1)
+julia> confidence_interval = confint(fit; level=0.9)
 2-element Array{Tuple{Float64,Float64},1}:
  (0.992333, 1.02977)
  (1.98537, 2.16162)

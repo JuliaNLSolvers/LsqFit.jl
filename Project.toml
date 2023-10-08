@@ -8,13 +8,13 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NLSolversBase = "d41bc354-129a-5804-8e4c-c37616107c6c"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+StatsAPI = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
 
 [compat]
 Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25"
 ForwardDiff = "0.10"
 NLSolversBase = "7.5"
-StatsBase = "0.32, 0.33, 0.34"
+StatsAPI = "1"
 julia = "1.6"
 
 [extras]

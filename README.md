@@ -52,7 +52,7 @@ fit_bounds = curve_fit(model, xdata, ydata, p0_bounds, lower=lb, upper=ub)
 sigma = stderror(fit)
 # to get margin of error and confidence interval of each parameter at 5% significance level:
 margin_of_error = margin_error(fit, 0.05)
-confidence_inter = confidence_interval(fit, 0.05)
+confidence_inter = confint(fit; level=0.95)
 
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
@@ -206,18 +206,18 @@ If no weights are provided for the fits, the variance is estimated from the mean
 
 This returns the product of standard error and critical value of each parameter at `alpha` significance level.
 
-`confidence_interval = confidence_interval(fit, alpha=0.05; atol, rtol)`:
+`confidence_interval = confint(fit; level=0.05, atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
-* `alpha`: significance level
+* `level`: confidence level
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check
 
-This returns confidence interval of each parameter at `alpha` significance level.
+This returns confidence interval of each parameter at `level` significance level.
 
 ----
 
-`covar = estimate_covar(fit)`:
+`covar = vcov(fit)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `covar`: parameter covariance matrix calculated from the Jacobian of the model at the fit point, using the weights (if specified) as the inverse covariance of observations
