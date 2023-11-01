@@ -28,6 +28,16 @@ using StatsAPI: coef, confint, dof, nobs, rss, stderror, weights, residuals, vco
 
 import Base.summary
 
+# 
+function __init__()
+    @static if !isdefined(Base, :get_extension)
+        @require Measurements="eff96d63-e80a-5855-80a2-b1b0885c5ab7" begin
+             include("../ext/MeasurementsExt.jl")
+         end
+    end
+end
+
+
 include("geodesic.jl")
 include("levenberg_marquardt.jl")
 include("curve_fit.jl")
