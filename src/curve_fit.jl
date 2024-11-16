@@ -17,7 +17,7 @@ mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 function check_data_health(xdata, ydata, wt = [])
     if any(ismissing, xdata)
-        error("The independent variable ()`x`) contains `missing` values and a fit cannot be performed")
+        error("The independent variable (`x`) contains `missing` values and a fit cannot be performed")
     end
     if any(ismissing, ydata)
         error("The dependent variable (`y`) contains `missing` values and a fit cannot be performed")
@@ -25,13 +25,13 @@ function check_data_health(xdata, ydata, wt = [])
     if any(ismissing, wt)
         error("Weight data contains `missing` values and a fit cannot be performed")
     end
-    if any(isfinite, xdata)
+    if any(!isfinite, xdata)
         error("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
     end
-    if any(isfinite, ydata)
+    if any(!isfinite, ydata)
         error("The dependent variable (`y`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
     end
-    if any(isfinite, wt)
+    if any(!isfinite, wt)
         error("Weight contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
     end
         
