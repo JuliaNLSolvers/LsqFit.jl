@@ -3,7 +3,7 @@ LsqFit.jl
 
 The LsqFit package is a small library that provides basic least-squares fitting in pure Julia under an MIT license. The basic functionality was originally in [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl), before being separated into this library.  At this time, `LsqFit` only utilizes the Levenberg-Marquardt algorithm for non-linear fitting.
 
-[![Build Status](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl.svg)](https://travis-ci.org/JuliaNLSolvers/LsqFit.jl)
+[![CI](https://github.com/JuliaNLSolvers/LsqFit.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JuliaNLSolvers/LsqFit.jl/actions/workflows/ci.yml)
 [![latest](https://img.shields.io/badge/docs-latest-blue.svg)](https://julianlsolvers.github.io/LsqFit.jl/latest/)
 
 Basic Usage
@@ -52,7 +52,7 @@ fit_bounds = curve_fit(model, xdata, ydata, p0_bounds, lower=lb, upper=ub)
 sigma = stderror(fit)
 # to get margin of error and confidence interval of each parameter at 5% significance level:
 margin_of_error = margin_error(fit, 0.05)
-confidence_inter = confidence_interval(fit, 0.05)
+confidence_inter = confint(fit; level=0.95)
 
 # The finite difference method is used above to approximate the Jacobian.
 # Alternatively, a function which calculates it exactly can be supplied instead.
@@ -67,10 +67,37 @@ fit = curve_fit(model, jacobian_model, xdata, ydata, p0)
 
 Multivariate regression
 -----------------------
-There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification:
+There's nothing inherently different if there are more than one variable entering the problem. We just need to specify the columns appropriately in our model specification.
 ```julia
-@. multimodel(x, p) = p[1]*exp(-x[:, 1]*p[2]+x[:, 2]*p[3])
+using LsqFit
+
+x = collect(range(0, stop=200, length=201))
+y = collect(range(0, stop=200, length=201))
+
+xy = hcat(x, y)
+
+function twoD_Gaussian(xy, p)
+    amplitude, xo, yo, sigma_x, sigma_y, theta, offset = p
+    a = (cos(theta)^2)/(2*sigma_x^2) + (sin(theta)^2)/(2*sigma_y^2)
+    b = -(sin(2*theta))/(4*sigma_x^2) + (sin(2*theta))/(4*sigma_y^2)
+    c = (sin(theta)^2)/(2*sigma_x^2) + (cos(theta)^2)/(2*sigma_y^2)
+
+    # creating linear meshgrid from xy
+    x = xy[:, 1]
+    y = xy[:, 2]
+    g = offset .+ amplitude .* exp.( - (a.*((x .- xo).^2) + 2 .* b .* (x .- xo) .* (y .- yo) + c * ((y .- yo).^2)))
+    return g[:]
+end
+
+p0 = Float64.([3, 100, 100, 20, 40, 0, 10])
+data = twoD_Gaussian(xy, p0)
+
+# Noisy data
+data_noisy = data + 0.2 * randn(size(data))
+
+fit = LsqFit.curve_fit(twoD_Gaussian, xy, data_noisy, p0)
 ```
+
 Evaluating the Jacobian and using automatic differentiation
 -------------------------
 The default is to calculate the Jacobian using a central finite differences scheme if no Jacobian function is provided. The default is to use central differences because it can be more accurate than forward finite differences, but at the expense of computational cost. It is possible to switch to forward finite differences, like MINPACK uses for example, by specifying
@@ -179,18 +206,18 @@ If no weights are provided for the fits, the variance is estimated from the mean
 
 This returns the product of standard error and critical value of each parameter at `alpha` significance level.
 
-`confidence_interval = confidence_interval(fit, alpha=0.05; atol, rtol)`:
+`confidence_interval = confint(fit; level=0.05, atol, rtol)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
-* `alpha`: significance level
+* `level`: confidence level
 * `atol`: absolute tolerance for negativity check
 * `rtol`: relative tolerance for negativity check
 
-This returns confidence interval of each parameter at `alpha` significance level.
+This returns confidence interval of each parameter at `level` significance level.
 
 ----
 
-`covar = estimate_covar(fit)`:
+`covar = vcov(fit)`:
 
 * `fit`: result of curve_fit (a `LsqFitResult` type)
 * `covar`: parameter covariance matrix calculated from the Jacobian of the model at the fit point, using the weights (if specified) as the inverse covariance of observations

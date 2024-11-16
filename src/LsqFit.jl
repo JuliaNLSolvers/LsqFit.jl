@@ -1,27 +1,35 @@
 module LsqFit
 
-    export curve_fit,
-           margin_error,
-           confidence_interval,
-           estimate_covar,
-           make_hessian,
-           Avv,
-           # StatsBase reexports
-           dof, coef, nobs, mse, rss,
-           stderror, weights, residuals
+export curve_fit,
+    margin_error,
+    make_hessian,
+    Avv,
+    # StatsAPI reexports
+    dof,
+    coef,
+    confint,
+    nobs,
+    mse,
+    rss,
+    stderror,
+    weights,
+    residuals,
+    vcov
 
-    using Distributions
-    using OptimBase
-    using LinearAlgebra
-    using ForwardDiff
-    import NLSolversBase: value, jacobian
-    import StatsBase
-    import StatsBase: coef, dof, nobs, rss, stderror, weights, residuals
+using Distributions
+using LinearAlgebra
+using ForwardDiff
+using Printf
+using StatsAPI
 
-    import Base.summary
+import NLSolversBase:
+    value, value!, jacobian, jacobian!, value_jacobian!!, OnceDifferentiable
+using StatsAPI: coef, confint, dof, nobs, rss, stderror, weights, residuals, vcov
 
-    include("geodesic.jl")
-    include("levenberg_marquardt.jl")
-    include("curve_fit.jl")
+import Base.summary
+
+include("geodesic.jl")
+include("levenberg_marquardt.jl")
+include("curve_fit.jl")
 
 end
