@@ -16,12 +16,25 @@ StatsBase.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr)/dof(lfr)
 
 function check_data_health(xdata, ydata, wt = [])
-    if any(ismissing, xdata) || any(ismissing, ydata) || any(ismissing, wt)
-        error("Data contains `missing` values and a fit cannot be performed")
+    if any(ismissing, xdata)
+        error("The independent variable ()`x`) contains `missing` values and a fit cannot be performed")
     end
-    if any(isinf, xdata) || any(isinf, ydata) || any(isinf, wt) || any(isnan, xdata) || any(isnan, ydata) || any(isnan, wt)
-        error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
+    if any(ismissing, ydata)
+        error("The dependent variable (`y`) contains `missing` values and a fit cannot be performed")
     end
+    if any(ismissing, wt)
+        error("Weight data contains `missing` values and a fit cannot be performed")
+    end
+    if any(isfinite, xdata)
+        error("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+    if any(isfinite, ydata)
+        error("The dependent variable (`y`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+    if any(isfinite, wt)
+        error("Weight contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+        
 end
 
 # provide a method for those who have their own Jacobian function
