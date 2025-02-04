@@ -80,7 +80,7 @@ By default, the finite differences is used (see [NLSolversBase.jl](https://githu
 
 ```Julia
 function j_m(t,p)
-    J = Array{Float64}(undef,length(t),length(p))
+    J = zeros(length(t),length(p))
     J[:,1] = exp.(p[2] .* t)       #df/dp[1]
     J[:,2] = t .* p[1] .* J[:,1]   #df/dp[2]
     J
