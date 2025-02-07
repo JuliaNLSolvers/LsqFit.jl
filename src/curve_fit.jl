@@ -16,13 +16,26 @@ StatsAPI.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr) / dof(lfr)
 isconverged(lsr::LsqFitResult) = lsr.converged
 
-function check_data_health(xdata, ydata)
-    if any(ismissing, xdata) || any(ismissing, ydata)
-        error("Data contains `missing` values and a fit cannot be performed")
+function check_data_health(xdata, ydata, wt = [])
+    if any(ismissing, xdata)
+        error("The independent variable (`x`) contains `missing` values and a fit cannot be performed")
     end
-    if any(isinf, xdata) || any(isinf, ydata) || any(isnan, xdata) || any(isnan, ydata)
-        error("Data contains `Inf` or `NaN` values and a fit cannot be performed")
+    if any(ismissing, ydata)
+        error("The dependent variable (`y`) contains `missing` values and a fit cannot be performed")
     end
+    if any(ismissing, wt)
+        error("Weight data contains `missing` values and a fit cannot be performed")
+    end
+    if any(!isfinite, xdata)
+        error("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+    if any(!isfinite, ydata)
+        error("The dependent variable (`y`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+    if any(!isfinite, wt)
+        error("Weight contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+    end
+        
 end
 
 # provide a method for those who have their own Jacobian function
@@ -174,7 +187,7 @@ function curve_fit(
     inplace=false,
     kwargs...,
 )
-    check_data_health(xdata, ydata)
+    check_data_health(xdata, ydata, wt)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -198,7 +211,7 @@ function curve_fit(
     inplace=false,
     kwargs...,
 )
-    check_data_health(xdata, ydata)
+    check_data_health(xdata, ydata, wt)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
@@ -220,7 +233,7 @@ function curve_fit(
     p0::AbstractArray;
     kwargs...,
 )
-    check_data_health(xdata, ydata)
+    check_data_health(xdata, ydata, wt)
 
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
@@ -244,7 +257,7 @@ function curve_fit(
     p0::AbstractArray;
     kwargs...,
 )
-    check_data_health(xdata, ydata)
+    check_data_health(xdata, ydata, wt)
 
     u = cholesky(wt).U
 

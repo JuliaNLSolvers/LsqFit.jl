@@ -168,6 +168,26 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
     )
     @test fit_wt.converged
 
+    @testset "bad input" begin
+        xxdata = copy(collect(xdata))
+        yydata = copy(ydata)
+        WWT = 1 ./ sqrt.(yvars)
+        x1 = xxdata[1]
+        y1 = yydata[1]
+        wt1 = WWT[1]
+        for x in (x1, Inf, -Inf, NaN), y in (y1, Inf, -Inf, NaN), wt in (wt1, Inf, -Inf, NaN)
+
+            xxdata[1] = x
+            yydata[1] = y
+            WWT[1] = wt
+            if x == x1 && y == y1 && wt == wt1
+                @test_nowarn curve_fit(model, jacobian_model, xxdata, yydata, WWT, [0.5, 0.5]; maxIter=100)
+            else
+                @test_throws ErrorException curve_fit(model, jacobian_model, xxdata, yydata, WWT, [0.5, 0.5]; maxIter=100)
+            end
+        end
+    end
+
     println("\t Inplace with weights")
     fit_inplace_wt = @time curve_fit(
         model_inplace,
