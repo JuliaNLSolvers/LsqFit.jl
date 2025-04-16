@@ -113,3 +113,23 @@ end
     @test coef(fit)[1] ≈ 1
     @test coef(fit_bounded)[1] ≈ 1.22727271
 end
+
+
+@testset "complex" begin
+    x = collect(1.0:10)
+    @. model(x, p) = p[1] * x + 1im*p[2]
+    p = [-2.0, 3]
+    y = model(x, p)
+    fit = curve_fit(model, x, y, [0.0, -5.0])
+    @test fit.converged
+    @test fit.param ≈ p atol=1e-9
+
+    x = range(-10, 10, length=101)
+    @. model(x, p) = p[1] / (1.0 + 1im * p[3] * (x - p[2]))
+    p = [2.0, 3, 0.5]
+    y = model(x, p)
+    fit = curve_fit(model, x, y, [1.0, -5.0, 0.05];
+                    lower=[0.0, -Inf, 0.0])
+    @test fit.converged
+    @test fit.param ≈ p atol=1e-9
+end
