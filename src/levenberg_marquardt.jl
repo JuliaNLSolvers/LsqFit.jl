@@ -94,13 +94,13 @@ function levenberg_marquardt(
     lower::AbstractVector{T}=Array{T}(undef, 0),
     upper::AbstractVector{T}=Array{T}(undef, 0),
     avv!::Union{Function,Nothing,Avv}=nothing,
-) where {T}
+) where {T<:Real}
 
     # First evaluation
     value_jacobian!!(df, initial_x)
 
     if isfinite(tau)
-        lambda = tau * maximum(jacobian(df)' * jacobian(df))
+        lambda = tau*maximum(real, jacobian(df)'*jacobian(df))
     end
 
 
@@ -152,8 +152,8 @@ function levenberg_marquardt(
 
     # and an alias for the jacobian
     J = jacobian(df)
-    dir_deriv = Array{T}(undef, m)
-    v = Array{T}(undef, n)
+    dir_deriv = Array{T}(undef,m)
+    v = Array{T}(undef,n)
 
     # Maintain a trace of the system.
     tr = LMTrace{LevenbergMarquardt}()
@@ -162,8 +162,8 @@ function levenberg_marquardt(
         os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
         push!(tr, os)
         if show_trace
-            println(os)
-        end
+        println(os)
+    end
     end
 
     startTime = time()
@@ -172,61 +172,42 @@ function levenberg_marquardt(
         # jacobian! will check if x is new or not, so it is only actually
         # evaluated if x was updated last iteration.
         jacobian!(df, x) # has alias J
-
-        # we want to solve:
+        # Use QR with column pivoting to solve the regularized least squares problem
         #    argmin 0.5*||J(x)*delta_x + f(x)||^2 + lambda*||diagm(J'*J)*delta_x||^2
-        # Solving for the minimum gives:
-        #    (J'*J + lambda*diagm(DtD)) * delta_x == -J' * f(x), where DtD = sum(abs2, J,1)
-        # Where we have used the equivalence: diagm(J'*J) = diagm(sum(abs2, J,1))
-        # It is additionally useful to bound the elements of DtD below to help
-        # prevent "parameter evaporation".
-
-        DtD = vec(sum(abs2, J, dims=1))
-        for i = 1:length(DtD)
-            if DtD[i] <= MIN_DIAGONAL
-                DtD[i] = MIN_DIAGONAL
-            end
+        Q,R,p = qr(J, ColumnNorm())
+        rhs = -Matrix(Q)'*value(df)
+        if eltype(J) <: Real
+            RR = vcat(R, lambda*I)
+            rhs = vcat(rhs, zeros(T, n))
+        else
+            RR = vcat(real.(R), imag.(R), lambda*I) # nonlinear parameters are real
+            rhs = vcat(real.(rhs), imag.(rhs), zeros(T, n))
         end
+        v[p] = (RR\rhs)
 
-        # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*value(df) )
-        mul!(JJ, transpose(J), J)
-        @simd for i = 1:n
-            @inbounds JJ[i, i] += lambda * DtD[i]
-        end
-        # n_buffer is delta C, JJ is g compared to Mark's code
-        mul!(n_buffer, transpose(J), value(df))
-        rmul!(n_buffer, -1)
-
-        v .= JJ \ n_buffer
-
-
-        if avv! != nothing
-            # GEODESIC ACCELERATION PART
+        if avv! != nothing && isreal(J)  # Geodesic acceleration for complex Jacobian needs to be verified for correctness. It might work as is.
+            #GEODESIC ACCELERATION PART
             avv!(dir_deriv, x, v)
-            mul!(a, transpose(J), dir_deriv)
-            rmul!(a, -1) # we multiply by -1 before the decomposition/division
-            LAPACK.potrf!('U', JJ) # in place cholesky decomposition
-            LAPACK.potrs!('U', JJ, a) # divides a by JJ, taking into account the fact that JJ is now the `U` cholesky decoposition of what it was before
+            mul!(a, J', dir_deriv)
+            rmul!(a, -1)
+            a = (R\(R'\a[p]))
+            a[p] = a
             rmul!(a, 0.5)
             delta_x .= v .+ a
-            # end of the GEODESIC ACCELERATION PART
+            #end of the GEODESIC ACCELERATION PART
         else
             delta_x = v
         end
 
-
-
-
-
         # apply box constraints
         if !isempty(lower)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = max(x[i] + delta_x[i], lower[i]) - x[i]
+            @simd for i in 1:n
+               @inbounds delta_x[i] = max(x[i] + delta_x[i], lower[i]) - x[i]
             end
         end
         if !isempty(upper)
-            @simd for i = 1:n
-                @inbounds delta_x[i] = min(x[i] + delta_x[i], upper[i]) - x[i]
+            @simd for i in 1:n
+               @inbounds delta_x[i] = min(x[i] + delta_x[i], upper[i]) - x[i]
             end
         end
 
@@ -259,11 +240,11 @@ function levenberg_marquardt(
             residual = trial_residual
             if rho > good_step_quality
                 # increase trust region radius
-                lambda = max(lambda_decrease * lambda, MIN_LAMBDA)
+                lambda = max(lambda_decrease*lambda, MIN_LAMBDA)
             end
         else
             # decrease trust region radius
-            lambda = min(lambda_increase * lambda, MAX_LAMBDA)
+            lambda = min(lambda_increase*lambda, MAX_LAMBDA)
         end
 
         iterCt += 1
@@ -275,8 +256,8 @@ function levenberg_marquardt(
             os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
             if show_trace
-                println(os)
-            end
+            println(os)
+        end
         end
 
         # check convergence criteria:
@@ -285,24 +266,24 @@ function levenberg_marquardt(
         if norm(J' * value(df), Inf) < g_tol
             g_converged = true
         end
-        if norm(delta_x) < x_tol * (x_tol + norm(x))
+        if norm(delta_x) < x_tol*(x_tol + norm(x))
             x_converged = true
         end
         converged = g_converged | x_converged
     end
 
     LMResults(
-        LevenbergMarquardt(),  # method
+        LevenbergMarquardt(),    # method
         initial_x,             # initial_x
         x,                     # minimizer
-        sum(abs2, value(df)),  # minimum
+        sum(abs2, value(df)),       # minimum
         iterCt,                # iterations
         !converged,            # iteration_converged
         x_converged,           # x_converged
         g_converged,           # g_converged
         Tval(g_tol),              # g_tol
         tr,                    # trace
-        first(df.f_calls),     # f_calls
-        first(df.df_calls),    # g_calls
+        first(df.f_calls),               # f_calls
+        first(df.df_calls),               # g_calls
     )
 end
