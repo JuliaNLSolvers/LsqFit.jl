@@ -140,13 +140,13 @@ function levenberg_marquardt(
     x = copy(initial_x)
     delta_x = copy(initial_x)
 
-    f_buffer = NaN*value(df)
+    f_buffer = T(NaN)*value(df)
     residual = sum(abs2, value(df))
     Tval = typeof(residual)
     # Create buffers
     n = length(x)
     m = length(value(df))
-    n_buffer = Vector{T}(undef, n)
+    n_buffer = T(NaN)*x
     # f_buffer = similar(value(df))
 
     # and an alias for the jacobian
