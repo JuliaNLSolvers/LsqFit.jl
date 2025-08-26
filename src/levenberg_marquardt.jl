@@ -94,6 +94,7 @@ function levenberg_marquardt(
     lower::AbstractVector{T}=Array{T}(undef, 0),
     upper::AbstractVector{T}=Array{T}(undef, 0),
     avv!::Union{Function,Nothing,Avv}=nothing,
+    callback::Function=x -> false,
 ) where {T}
 
     # First evaluation
@@ -158,7 +159,7 @@ function levenberg_marquardt(
     # Maintain a trace of the system.
     tr = LMTrace{LevenbergMarquardt}()
     if show_trace || store_trace
-        d = Dict("lambda" => lambda)
+        d = Dict("lambda" => lambda, "x" => copy(x))
         os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), NaN, d)
         push!(tr, os)
         if show_trace
@@ -168,7 +169,7 @@ function levenberg_marquardt(
 
     startTime = time()
 
-    while (~converged && iterCt < maxIter && maxTime > time() - startTime)
+    while (~converged && iterCt < maxIter && maxTime > time() - startTime && !callback(tr))
         # jacobian! will check if x is new or not, so it is only actually
         # evaluated if x was updated last iteration.
         jacobian!(df, x) # has alias J
@@ -271,7 +272,7 @@ function levenberg_marquardt(
         # show state
         if show_trace || store_trace
             g_norm = norm(J' * value(df), Inf)
-            d = Dict("g(x)" => g_norm, "dx" => copy(delta_x), "lambda" => lambda)
+            d = Dict("g(x)" => g_norm, "dx" => copy(delta_x), "lambda" => lambda, "x" => copy(x))
             os = LMState{LevenbergMarquardt}(iterCt, sum(abs2, value(df)), g_norm, d)
             push!(tr, os)
             if show_trace
