@@ -13,7 +13,7 @@ StatsAPI = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
 [compat]
 Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25"
 ForwardDiff = "0.10, 1.0"
-NLSolversBase = "7.5"
+NLSolversBase = "7.5, 8.0"
 StatsAPI = "1"
 julia = "1.6"
 
