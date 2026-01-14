@@ -40,10 +40,10 @@ fit = curve_fit(m, tdata, ydata, p0)
 
 It will return a composite type `LsqFitResult`, with some interesting values:
 
-*	`dof(fit)`: degrees of freedom
-*	`coef(fit)`: best fit parameters
-*	`fit.resid`: vector of residuals
-*	`fit.jacobian`: estimated Jacobian at the solution
+* `dof(fit)`: degrees of freedom
+* `coef(fit)`: best fit parameters
+* `fit.resid`: vector of residuals
+* `fit.jacobian`: estimated Jacobian at the solution
 
 ## Jacobian Calculation
 
