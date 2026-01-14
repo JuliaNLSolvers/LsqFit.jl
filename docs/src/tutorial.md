@@ -31,11 +31,11 @@ Y_i = \gamma_1 \exp(\gamma_2 t_i) + \epsilon_i
 To fit data using `LsqFit.jl`, pass the defined model function (`m`), data (`tdata` and `ydata`) and the initial parameter value (`p0`) to `curve_fit()`. For now, `LsqFit.jl` only supports the Levenberg Marquardt algorithm.
 
 ```julia
-julia> # t: array of independent variables
-julia> # p: array of model parameters
-julia> m(t, p) = p[1] * exp.(p[2] * t)
-julia> p0 = [0.5, 0.5]
-julia> fit = curve_fit(m, tdata, ydata, p0)
+# t: array of independent variables
+# p: array of model parameters
+m(t, p) = p[1] * exp.(p[2] * t)
+p0 = [0.5, 0.5]
+fit = curve_fit(m, tdata, ydata, p0)
 ```
 
 It will return a composite type `LsqFitResult`, with some interesting values:
@@ -188,36 +188,36 @@ In `LsqFit.jl`, the covariance matrix calculation uses QR decomposition to [be m
 
 `vcov()` computes the covariance matrix of fit:
 
-```Julia
+```julia-repl
 julia> cov = vcov(fit)
-2×2 Array{Float64,2}:
+2×2 Matrix{Float64}:
  0.000116545  0.000174633
  0.000174633  0.00258261
 ```
 
 The standard error is then the square root of each diagonal elements of the covariance matrix. `stderror()` returns the standard error of each parameter:
 
-```Julia
+```julia-repl
 julia> se = stderror(fit)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.0114802
  0.0520416
 ```
 
 `margin_error()` computes the product of standard error and the critical value of each parameter at a certain significance level (default is 5%) from t-distribution. The margin of error at 10% significance level can be computed by:
 
-```Julia
+```julia-repl
 julia> margin_of_error = margin_error(fit, 0.1)
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  0.0199073
  0.0902435
 ```
 
 `confint()` returns the confidence interval of each parameter at certain significance level, which is essentially the estimate value ± margin of error. To get the confidence interval at 10% significance level, run:
 
-```Julia
+```julia-repl
 julia> confidence_intervals = confint(fit; level=0.9)
-2-element Array{Tuple{Float64,Float64},1}:
+2-element Vector{Tuple{Float64,Float64}}:
  (0.976316, 1.01613)
  (1.91047, 2.09096)
 ```
@@ -350,9 +350,9 @@ where $\sigma^2$ is estimated. In this case, if we set $W = I$, the result will 
 Pass the vector of `1 ./ var(ε)` or the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
 
 ```Julia
-julia> wt = inv(cov_ε)
-julia> fit = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = vcov(fit)
+wt = inv(cov_ε)
+fit = curve_fit(m, tdata, ydata, wt, p0)
+cov = vcov(fit)
 ```
 
 !!! note
@@ -370,9 +370,9 @@ Set the weight matrix as the inverse of the error covariance matrix (the optimal
 Pass the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
 
 ```Julia
-julia> wt = 1 ./ yvar
-julia> fit = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = vcov(fit)
+wt = 1 ./ yvar
+fit = curve_fit(m, tdata, ydata, wt, p0)
+cov = vcov(fit)
 ```
 
 ## Estimate the Optimal Weight
@@ -385,10 +385,10 @@ In most cases, the variances of errors are unknown. To perform Weighted Least Sq
 Unweighted fitting (OLS) will return the residuals we need, since the estimator of OLS is unbiased. Then pass the reciprocal of the residuals as the estimated optimal weight to perform Weighted Least Squares:
 
 ```Julia
-julia> fit_OLS = curve_fit(m, tdata, ydata, p0)
-julia> wt = 1 ./ fit_OLS.resid
-julia> fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
-julia> cov = vcov(fit_WLS)
+fit_OLS = curve_fit(m, tdata, ydata, p0)
+wt = 1 ./ fit_OLS.resid
+fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
+cov = vcov(fit_WLS)
 ```
 
 ## References
