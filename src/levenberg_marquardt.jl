@@ -91,18 +91,20 @@ function levenberg_marquardt(
     good_step_quality::Real=0.75,
     show_trace::Bool=false,
     store_trace::Bool=false,
-    lower::AbstractVector{T}=Array{T}(undef, 0),
-    upper::AbstractVector{T}=Array{T}(undef, 0),
+    lower::AbstractVector{T}=T[],
+    upper::AbstractVector{T}=T[],
     avv!::Union{Function,Nothing,Avv}=nothing,
 ) where {T}
 
     # First evaluation
     value_jacobian!!(df, initial_x)
 
-    if isfinite(tau)
-        lambda = tau * maximum(jacobian(df)' * jacobian(df))
+    # calculate initial lambda based on J'J
+    # if tau is not Inf, we use the heuristic tau*maximum(J'J)
+     JJ = jacobian(df)'*jacobian(df)
+     if isfinite(tau)
+        lambda = tau * maximum(JJ)
     end
-
 
     # check parameters
     (
@@ -126,8 +128,8 @@ function levenberg_marquardt(
 
 
     # other constants
-    MAX_LAMBDA = 1e16 # minimum trust region radius
-    MIN_LAMBDA = 1e-16 # maximum trust region radius
+    MAX_LAMBDA = 1e16 # maximum trust region radius
+    MIN_LAMBDA = 1e-16 # minimum trust region radius
     MIN_DIAGONAL = 1e-6 # lower bound on values of diagonal matrix used to regularize the trust region step
 
 
@@ -137,24 +139,24 @@ function levenberg_marquardt(
     iterCt = 0
     x = copy(initial_x)
     delta_x = copy(initial_x)
-    a = similar(x)
 
-    trial_f = similar(value(df))
+    f_buffer = T(NaN)*value(df)
     residual = sum(abs2, value(df))
     Tval = typeof(residual)
-
     # Create buffers
     n = length(x)
     m = length(value(df))
-    JJ = Matrix{T}(undef, n, n)
-    n_buffer = Vector{T}(undef, n)
-    Jdelta_buffer = similar(value(df))
+    n_buffer = T(NaN)*x
+    # f_buffer = similar(value(df))
 
     # and an alias for the jacobian
     J = jacobian(df)
-    dir_deriv = Array{T}(undef, m)
-    v = Array{T}(undef, n)
-
+        
+     if avv! !== nothing
+        dir_deriv = Array{T}(undef, m)
+        a = similar(x) # rename to something with acceleration
+        v = Array{T}(undef, n)
+    end
     # Maintain a trace of the system.
     tr = LMTrace{LevenbergMarquardt}()
     if show_trace || store_trace
@@ -189,7 +191,7 @@ function levenberg_marquardt(
         end
 
         # delta_x = ( J'*J + lambda * Diagonal(DtD) ) \ ( -J'*value(df) )
-        mul!(JJ, transpose(J), J)
+        mul!(JJ, J', J)
         @simd for i = 1:n
             @inbounds JJ[i, i] += lambda * DtD[i]
         end
@@ -197,10 +199,9 @@ function levenberg_marquardt(
         mul!(n_buffer, transpose(J), value(df))
         rmul!(n_buffer, -1)
 
-        v .= JJ \ n_buffer
+        if avv! !== nothing
+            v .= JJ \ n_buffer
 
-
-        if avv! != nothing
             # GEODESIC ACCELERATION PART
             avv!(dir_deriv, x, v)
             mul!(a, transpose(J), dir_deriv)
@@ -211,7 +212,7 @@ function levenberg_marquardt(
             delta_x .= v .+ a
             # end of the GEODESIC ACCELERATION PART
         else
-            delta_x = v
+            delta_x .= JJ \ n_buffer
         end
 
 
@@ -231,9 +232,9 @@ function levenberg_marquardt(
         end
 
         # if the linear assumption is valid, our new residual should be:
-        mul!(Jdelta_buffer, J, delta_x)
-        Jdelta_buffer .= Jdelta_buffer .+ value(df)
-        predicted_residual = sum(abs2, Jdelta_buffer)
+        mul!(f_buffer, J, delta_x)
+        f_buffer .= f_buffer .+ value(df)
+        predicted_residual = sum(abs2, f_buffer)
 
         # try the step and compute its quality
         # compute it inplace according to NLSolversBase value(obj, cache, state)
@@ -242,10 +243,11 @@ function levenberg_marquardt(
 
         # re-use n_buffer
         n_buffer .= x .+ delta_x
-        value(df, trial_f, n_buffer)
+
+        value(df, f_buffer, n_buffer)
 
         # update the sum of squares
-        trial_residual = sum(abs2, trial_f)
+        trial_residual = sum(abs2, f_buffer)
 
         # step quality = residual change / predicted residual change
         rho = (trial_residual - residual) / (predicted_residual - residual)
@@ -255,7 +257,7 @@ function levenberg_marquardt(
             x .= n_buffer
             # There should be an update_x_value to do this safely
             copyto!(df.x_f, x)
-            copyto!(value(df), trial_f)
+            copyto!(value(df), f_buffer)
             residual = trial_residual
             if rho > good_step_quality
                 # increase trust region radius
