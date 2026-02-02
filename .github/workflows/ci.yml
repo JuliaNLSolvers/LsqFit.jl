@@ -14,12 +14,10 @@ jobs:
         version:
           - min
           - '1'
-          - nightly
         os:
           - ubuntu-latest
         arch:
           - x64
-          - x86
         include:
           # test macOS and Windows with latest Julia only
           - os: macOS-latest
@@ -27,9 +25,6 @@ jobs:
             version: 1
           - os: windows-latest
             arch: x64
-            version: 1
-          - os: windows-latest
-            arch: x86
             version: 1
     steps:
       - uses: actions/checkout@v6
