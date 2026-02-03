@@ -269,17 +269,10 @@ end
 function StatsAPI.vcov(fit::LsqFitResult)
     # computes covariance matrix of fit parameters
     J = fit.jacobian
-
-    if isempty(fit.wt)
-        r = fit.resid
-
-        # compute the covariance matrix from the QR decomposition
-        Q, R = qr(J)
-        Rinv = inv(R)
-        covar = Rinv * Rinv' * mse(fit)
-    else
-        covar = inv(J' * J)
-    end
+    # compute from the QR decomposition of the Jacobian
+    Q, R = qr(J)
+    Rinv = inv(R)
+    covar = Rinv * Rinv' * mse(fit)
 
     return covar
 end
