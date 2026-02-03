@@ -26,6 +26,6 @@ Pkg.checkout("LsqFit")
 
 To use the package in your code
 
-```julia
+```julia-repl
 julia> using LsqFit
 ```
