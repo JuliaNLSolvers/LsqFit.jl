@@ -14,12 +14,10 @@ jobs:
         version:
           - min
           - '1'
-          - nightly
         os:
           - ubuntu-latest
         arch:
           - x64
-          - x86
         include:
           # test macOS and Windows with latest Julia only
           - os: macOS-latest
@@ -27,9 +25,6 @@ jobs:
             version: 1
           - os: windows-latest
             arch: x64
-            version: 1
-          - os: windows-latest
-            arch: x86
             version: 1
     steps:
       - uses: actions/checkout@v6
@@ -55,3 +50,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+      - name: Upload site as artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: Docs build
+          path: ./docs/build
