@@ -175,15 +175,33 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         x1 = xxdata[1]
         y1 = yydata[1]
         wt1 = WWT[1]
-        for x in (x1, Inf, -Inf, NaN), y in (y1, Inf, -Inf, NaN), wt in (wt1, Inf, -Inf, NaN)
+        for x in (x1, Inf, -Inf, NaN),
+            y in (y1, Inf, -Inf, NaN),
+            wt in (wt1, Inf, -Inf, NaN)
 
             xxdata[1] = x
             yydata[1] = y
             WWT[1] = wt
             if x == x1 && y == y1 && wt == wt1
-                @test_nowarn curve_fit(model, jacobian_model, xxdata, yydata, WWT, [0.5, 0.5]; maxIter=100)
+                @test_nowarn curve_fit(
+                    model,
+                    jacobian_model,
+                    xxdata,
+                    yydata,
+                    WWT,
+                    [0.5, 0.5];
+                    maxIter = 100,
+                )
             else
-                @test_throws ErrorException curve_fit(model, jacobian_model, xxdata, yydata, WWT, [0.5, 0.5]; maxIter=100)
+                @test_throws ErrorException curve_fit(
+                    model,
+                    jacobian_model,
+                    xxdata,
+                    yydata,
+                    WWT,
+                    [0.5, 0.5];
+                    maxIter = 100,
+                )
             end
         end
     end
@@ -200,7 +218,9 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
     )
     @test fit_inplace_wt.converged
 
-    @test maximum(abs.(fit_wt.param - fit_inplace_wt.param)) < 1e-15
+    # @test maximum(abs.(fit_wt.param - fit_inplace_wt.param)) < 1e-15
+    ## above test was too tight after using AutoFiniteDiff through the automatically selected DifferentiationInterface step size.
+    @test isapprox(fit_wt.param, fit_inplace_wt.param; rtol = 1e-13)
 
 
     println("\t Non-inplace with jacobian with weights")

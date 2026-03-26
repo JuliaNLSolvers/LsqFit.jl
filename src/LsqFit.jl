@@ -16,6 +16,7 @@ export curve_fit,
     residuals,
     vcov
 
+using ADTypes: AbstractADType, AutoFiniteDiff, AutoForwardDiff
 using Distributions
 using LinearAlgebra
 using ForwardDiff

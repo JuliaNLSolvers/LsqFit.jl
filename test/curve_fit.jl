@@ -1,13 +1,20 @@
 using LsqFit, Test, StableRNGs, LinearAlgebra
+using ADTypes: AutoFiniteDiff, AutoForwardDiff
 @testset "curve fit" begin
     # before testing the model, check whether missing/null data is rejected
     tdata = [rand(1:10, 5)..., missing]
-    @test_throws ErrorException("The independent variable (`x`) contains `missing` values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
+    @test_throws ErrorException(
+        "The independent variable (`x`) contains `missing` values and a fit cannot be performed",
+    ) LsqFit.check_data_health(tdata, tdata)
     tdata = [rand(1:10, 5)..., Inf]
-    @test_throws ErrorException("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
+    @test_throws ErrorException(
+        "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
+    ) LsqFit.check_data_health(tdata, tdata)
     tdata = [rand(1:10, 5)..., NaN]
-    @test_throws ErrorException("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed") LsqFit.check_data_health(tdata, tdata)
-   
+    @test_throws ErrorException(
+        "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
+    ) LsqFit.check_data_health(tdata, tdata)
+
     # fitting noisy data to an exponential model
     # TODO: Change to `.-x` when 0.5 support is dropped
     model(x, p) = p[1] .* exp.(-x .* p[2])
@@ -23,7 +30,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         ydata = T.(model(xdata, [1.0, 2.0]) + 0.01 * randn(rng, length(xdata)))
         p0 = T.([0.5, 0.5])
 
-        for ad in (:finite, :forward, :forwarddiff)
+        for ad in (AutoFiniteDiff(), AutoForwardDiff())
             fit = curve_fit(model, xdata, ydata, p0; autodiff = ad)
             @test norm(fit.param - [1.0, 2.0]) < 0.05
             @test fit.converged
@@ -40,12 +47,13 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
             J[:, 2] = -x .* p[1] .* J[:, 1]           #dmodel/dp[2]
             J
         end
-        jacobian_fit = curve_fit(model, jacobian_model, xdata, ydata, p0;show_trace=true)
+        jacobian_fit = curve_fit(model, jacobian_model, xdata, ydata, p0; show_trace = true)
         @test norm(jacobian_fit.param - [1.0, 2.0]) < 0.05
         @test jacobian_fit.converged
         @testset "#195" begin
             @test length(jacobian_fit.trace) > 1
-            @test jacobian_fit.trace[end].metadata["dx"][1] != jacobian_fit.trace[end-1].metadata["dx"][1]
+            @test jacobian_fit.trace[end].metadata["dx"][1] !=
+                  jacobian_fit.trace[end-1].metadata["dx"][1]
         end
         # some example data
         yvars = T.(1e-6 * rand(rng, length(xdata)))

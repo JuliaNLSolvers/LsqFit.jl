@@ -1,4 +1,4 @@
-struct LsqFitResult{P,R,J,W <: AbstractArray,T}
+struct LsqFitResult{P,R,J,W<:AbstractArray,T}
     param::P
     resid::R
     jacobian::J
@@ -18,36 +18,70 @@ isconverged(lsr::LsqFitResult) = lsr.converged
 
 function check_data_health(xdata, ydata, wt = [])
     if any(ismissing, xdata)
-        error("The independent variable (`x`) contains `missing` values and a fit cannot be performed")
+        error(
+            "The independent variable (`x`) contains `missing` values and a fit cannot be performed",
+        )
     end
     if any(ismissing, ydata)
-        error("The dependent variable (`y`) contains `missing` values and a fit cannot be performed")
+        error(
+            "The dependent variable (`y`) contains `missing` values and a fit cannot be performed",
+        )
     end
     if any(ismissing, wt)
         error("Weight data contains `missing` values and a fit cannot be performed")
     end
     if any(!isfinite, xdata)
-        error("The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+        error(
+            "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
+        )
     end
     if any(!isfinite, ydata)
-        error("The dependent variable (`y`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+        error(
+            "The dependent variable (`y`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
+        )
     end
     if any(!isfinite, wt)
-        error("Weight contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed")
+        error(
+            "Weight contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
+        )
     end
-        
+
+end
+
+# Convert legacy symbol-based autodiff to AbstractADType for NLSolversBase v8 compatibility.
+# Symbols were accepted in v7 but are no longer valid in v8.
+function _autodiff_adtype(autodiff::AbstractADType)
+    autodiff
+end
+function _autodiff_adtype(autodiff::Symbol)
+    Base.depwarn(
+        "Passing `autodiff` as a Symbol (e.g. `$(repr(autodiff))`) is deprecated. " *
+        "Use an `ADTypes` backend such as `AutoFiniteDiff()` or `AutoForwardDiff()` instead.",
+        :curve_fit,
+    )
+    if autodiff in (:finite, :central, :finiteforward, :finitecomplex)
+        return AutoFiniteDiff()
+    elseif autodiff in (:forward, :forwarddiff)
+        return AutoForwardDiff()
+    else
+        throw(
+            ArgumentError(
+                "Unsupported autodiff symbol: $(repr(autodiff)). Use `AutoFiniteDiff()` or `AutoForwardDiff()`.",
+            ),
+        )
+    end
 end
 
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
-    R = OnceDifferentiable(f, g, p0, copy(r); inplace=false)
+    R = OnceDifferentiable(f, g, p0, copy(r); inplace = false)
     lmfit(R, p0, wt; kwargs...)
 end
 
 # for inplace f and inplace g
 function lmfit(f!, g!, p0::AbstractArray, wt::AbstractArray, r::AbstractArray; kwargs...)
-    R = OnceDifferentiable(f!, g!, p0, copy(r); inplace=true)
+    R = OnceDifferentiable(f!, g!, p0, copy(r); inplace = true)
     lmfit(R, p0, wt; kwargs...)
 end
 
@@ -57,14 +91,26 @@ function lmfit(
     p0::AbstractArray,
     wt::AbstractArray,
     r::AbstractArray;
-    autodiff=:finite,
+    autodiff = AutoFiniteDiff(),
     kwargs...,
 )
-    R = OnceDifferentiable(f, p0, copy(r); inplace=true, autodiff=autodiff)
+    R = OnceDifferentiable(
+        f,
+        p0,
+        copy(r);
+        inplace = true,
+        autodiff = _autodiff_adtype(autodiff),
+    )
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff=:finite, kwargs...)
+function lmfit(
+    f,
+    p0::AbstractArray,
+    wt::AbstractArray;
+    autodiff = AutoFiniteDiff(),
+    kwargs...,
+)
     # this is a convenience function for the curve_fit() methods
     # which assume f(p) is the cost functionj i.e. the residual of a
     # model where
@@ -80,18 +126,17 @@ function lmfit(f, p0::AbstractArray, wt::AbstractArray; autodiff=:finite, kwargs
 
     # construct Jacobian function, which uses finite difference method
     r = f(p0)
-    autodiff = autodiff == :forwarddiff ? :forward : autodiff
-    R = OnceDifferentiable(f, p0, copy(r); inplace=false, autodiff=autodiff)
+    R = OnceDifferentiable(
+        f,
+        p0,
+        copy(r);
+        inplace = false,
+        autodiff = _autodiff_adtype(autodiff),
+    )
     lmfit(R, p0, wt; kwargs...)
 end
 
-function lmfit(
-    R::OnceDifferentiable,
-    p0::AbstractArray,
-    wt::AbstractArray;
-    autodiff=:finite,
-    kwargs...,
-)
+function lmfit(R::OnceDifferentiable, p0::AbstractArray, wt::AbstractArray; kwargs...)
     results = levenberg_marquardt(R, p0; kwargs...)
     p = results.minimizer
     converged = isconverged(results)
@@ -138,7 +183,7 @@ function curve_fit(
     xdata::AbstractArray,
     ydata::AbstractArray,
     p0::AbstractArray;
-    inplace=false,
+    inplace = false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -160,7 +205,7 @@ function curve_fit(
     xdata::AbstractArray,
     ydata::AbstractArray,
     p0::AbstractArray;
-    inplace=false,
+    inplace = false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -184,7 +229,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractArray,
     p0::AbstractArray;
-    inplace=false,
+    inplace = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -208,7 +253,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractArray,
     p0::AbstractArray;
-    inplace=false,
+    inplace = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -284,7 +329,7 @@ function StatsAPI.vcov(fit::LsqFitResult)
     return covar
 end
 
-function StatsAPI.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
+function StatsAPI.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
     # computes standard error of estimates from
     #   fit   : a LsqFitResult from a curve_fit()
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
@@ -296,40 +341,42 @@ function StatsAPI.stderror(fit::LsqFitResult; rtol::Real=NaN, atol::Real=0)
     if !isapprox(
         vratio,
         0.0,
-        atol=atol,
-        rtol=isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol,
+        atol = atol,
+        rtol = isnan(rtol) ? Base.rtoldefault(vratio, 0.0, 0) : rtol,
     ) && vratio < 0.0
         error("Covariance matrix is negative for atol=$atol and rtol=$rtol")
     end
     return sqrt.(abs.(vars))
 end
 
-function margin_error(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0)
+function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
     # computes margin of error at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   alpha : significance level, e.g. alpha=0.05 for 95% confidence
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol=rtol, atol=atol)
+    std_errors = stderror(fit; rtol = rtol, atol = atol)
     dist = TDist(dof(fit))
     critical_values = eltype(coef(fit))(quantile(dist, Float64(1 - alpha / 2)))
     # scale standard errors by quantile of the student-t distribution (critical values)
     return std_errors * critical_values
 end
 
-function StatsAPI.confint(fit::LsqFitResult; level=0.95, rtol::Real=NaN, atol::Real=0)
+function StatsAPI.confint(fit::LsqFitResult; level = 0.95, rtol::Real = NaN, atol::Real = 0)
     # computes confidence intervals at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
     #   level : confidence level
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
-    std_errors = stderror(fit; rtol=rtol, atol=atol)
-    margin_of_errors = margin_error(fit, 1 - level; rtol=rtol, atol=atol)
+    std_errors = stderror(fit; rtol = rtol, atol = atol)
+    margin_of_errors = margin_error(fit, 1 - level; rtol = rtol, atol = atol)
     return collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
 
-@deprecate(confidence_interval(fit::LsqFitResult, alpha=0.05; rtol::Real=NaN, atol::Real=0),
-           confint(fit; level=(1 - alpha), rtol=rtol, atol=atol))
+@deprecate(
+    confidence_interval(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0),
+    confint(fit; level = (1 - alpha), rtol = rtol, atol = atol)
+)
 
 @deprecate estimate_covar(fit::LsqFitResult) vcov(fit)
 
@@ -337,7 +384,7 @@ end
 
 @deprecate estimate_errors(
     fit::LsqFitResult,
-    confidence=0.95;
-    rtol::Real=NaN,
-    atol::Real=0,
-) margin_error(fit, 1 - confidence; rtol=rtol, atol=atol)
+    confidence = 0.95;
+    rtol::Real = NaN,
+    atol::Real = 0,
+) margin_error(fit, 1 - confidence; rtol = rtol, atol = atol)
