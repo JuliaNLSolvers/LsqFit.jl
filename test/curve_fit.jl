@@ -1,5 +1,4 @@
 using LsqFit, Test, StableRNGs, LinearAlgebra
-using ADTypes: AutoFiniteDiff, AutoForwardDiff
 @testset "curve fit" begin
     # before testing the model, check whether missing/null data is rejected
     tdata = [rand(1:10, 5)..., missing]
@@ -30,7 +29,7 @@ using ADTypes: AutoFiniteDiff, AutoForwardDiff
         ydata = T.(model(xdata, [1.0, 2.0]) + 0.01 * randn(rng, length(xdata)))
         p0 = T.([0.5, 0.5])
 
-        for ad in (AutoFiniteDiff(), AutoForwardDiff())
+        for ad in (AutoFiniteDiff(fdjtype = Val(:central)), AutoForwardDiff())
             fit = curve_fit(model, xdata, ydata, p0; autodiff = ad)
             @test norm(fit.param - [1.0, 2.0]) < 0.05
             @test fit.converged

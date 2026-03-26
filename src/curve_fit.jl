@@ -95,7 +95,8 @@ function lmfit(
     p0::AbstractArray,
     wt::AbstractArray,
     r::AbstractArray;
-    autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
+    # autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
+    autodiff = AutoForwardDiff(),
     kwargs...,
 )
     R = OnceDifferentiable(
@@ -112,7 +113,8 @@ function lmfit(
     f,
     p0::AbstractArray,
     wt::AbstractArray;
-    autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
+    # autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
+    autodiff = AutoForwardDiff(),
     kwargs...,
 )
     # this is a convenience function for the curve_fit() methods
@@ -140,8 +142,32 @@ function lmfit(
     lmfit(R, p0, wt; kwargs...)
 end
 
+function _has_dual_args(e::MethodError)
+    return any(e.args) do arg
+        T = eltype(typeof(arg))
+        T <: ForwardDiff.Dual
+    end
+end
+
 function lmfit(R::OnceDifferentiable, p0::AbstractArray, wt::AbstractArray; kwargs...)
-    results = levenberg_marquardt(R, p0; kwargs...)
+    results = try
+        levenberg_marquardt(R, p0; kwargs...)
+    catch e
+        if e isa MethodError && _has_dual_args(e)
+            throw(
+                ArgumentError(
+                    """
+Model is not compatible with `AutoForwardDiff`: `$(e.f)` has no method accepting \
+`ForwardDiff.Dual` numbers.
+Either:
+  - switch to finite differences: `autodiff = AutoFiniteDiff(fdjtype = Val(:central))`
+  - or make the model more permissive w.r.t. the type of the parameters vector, e.g.,
+    replace `p::Vector{Float64}` with `p::AbstractVector{<:Real}`""",
+                ),
+            )
+        end
+        rethrow(e)
+    end
     p = results.minimizer
     converged = isconverged(results)
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged, results.trace, wt)
