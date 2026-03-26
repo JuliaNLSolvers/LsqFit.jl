@@ -17,7 +17,7 @@ Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25"
 ForwardDiff = "0.10, 1.0"
 NLSolversBase = "8"
 StatsAPI = "1"
-julia = "1.6"
+julia = "1.10"
 
 [extras]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
