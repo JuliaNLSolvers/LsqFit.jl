@@ -59,8 +59,12 @@ function _autodiff_adtype(autodiff::Symbol)
         "Use an `ADTypes` backend such as `AutoFiniteDiff()` or `AutoForwardDiff()` instead.",
         :curve_fit,
     )
-    if autodiff in (:finite, :central, :finiteforward, :finitecomplex)
-        return AutoFiniteDiff()
+    if autodiff in (:finite, :central)
+        return AutoFiniteDiff(fdjtype = Val(:central))
+    elseif autodiff == :finiteforward
+        return AutoFiniteDiff(fdjtype = Val(:forward))
+    elseif autodiff == :finitecomplex
+        return AutoFiniteDiff(fdjtype = Val(:complex))
     elseif autodiff in (:forward, :forwarddiff)
         return AutoForwardDiff()
     else
@@ -91,7 +95,7 @@ function lmfit(
     p0::AbstractArray,
     wt::AbstractArray,
     r::AbstractArray;
-    autodiff = AutoFiniteDiff(),
+    autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
     kwargs...,
 )
     R = OnceDifferentiable(
@@ -108,7 +112,7 @@ function lmfit(
     f,
     p0::AbstractArray,
     wt::AbstractArray;
-    autodiff = AutoFiniteDiff(),
+    autodiff = AutoFiniteDiff(fdjtype = Val(:central)),
     kwargs...,
 )
     # this is a convenience function for the curve_fit() methods

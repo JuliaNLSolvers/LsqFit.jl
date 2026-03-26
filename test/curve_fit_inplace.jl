@@ -218,10 +218,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
     )
     @test fit_inplace_wt.converged
 
-    # @test maximum(abs.(fit_wt.param - fit_inplace_wt.param)) < 1e-15
-    ## above test was too tight after using AutoFiniteDiff through the automatically selected DifferentiationInterface step size.
-    @test isapprox(fit_wt.param, fit_inplace_wt.param; rtol = 1e-13)
-
+    @test maximum(abs.(fit_wt.param - fit_inplace_wt.param)) < 1e-15
 
     println("\t Non-inplace with jacobian with weights")
     fit_wt_jac = @time curve_fit(
