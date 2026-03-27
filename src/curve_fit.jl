@@ -154,6 +154,16 @@ function curve_fit(
     end
 end
 
+curve_fit(
+    model::Function,
+    xdata::AbstractArray{T},
+    ydata::AbstractArray{Complex{T}},
+    p0::AbstractArray{T};
+    inplace=false,
+    kwargs...) where {T<:Real} =
+        curve_fit((x,p) -> reinterpret(T, model(x,p)),
+                  xdata, reinterpret(T, ydata), p0; inplace=inplace, kwargs...)
+
 function curve_fit(
     model,
     jacobian_model,
