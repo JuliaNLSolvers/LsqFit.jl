@@ -56,7 +56,7 @@ end
 function _autodiff_adtype(autodiff::Symbol)
     Base.depwarn(
         "Passing `autodiff` as a Symbol (e.g. `$(repr(autodiff))`) is deprecated. " *
-        "Use an `ADTypes` backend such as `AutoFiniteDiff()` or `AutoForwardDiff()` instead.",
+        "Use an `ADTypes` backend such as `AutoForwardDiff()` or `AutoFiniteDiff(fdjtype = Val(:central))` instead.",
         :curve_fit,
     )
     if autodiff in (:finite, :central)
