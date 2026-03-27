@@ -60,7 +60,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
 
         fit = curve_fit(model, xdata, ydata, 1 ./ yvars, T.([0.5, 0.5]))
 
-        @test norm(fit.param - [1.0, 2.0]) < 0.1
+        @test norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
 
         # test matrix valued weights ( #161 )
@@ -76,7 +76,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         # test with user-supplied jacobian and weights
         fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0)
         println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
-        @test norm(fit.param - [1.0, 2.0]) < 0.1
+        @test norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
 
         # Parameters can also be inferred using arbitrary precision
