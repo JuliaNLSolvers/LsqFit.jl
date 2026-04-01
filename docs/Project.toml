@@ -4,3 +4,6 @@ LsqFit = "2fda8390-95c7-5789-9bda-21331edee243"
 
 [compat]
 Documenter = "1"
+
+[sources]
+LsqFit = {path = ".."}
