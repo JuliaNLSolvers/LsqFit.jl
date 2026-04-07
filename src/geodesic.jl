@@ -36,8 +36,11 @@ function make_hessian(f!, x0, p0)
     f = OutOfPlace(f!, (length(x0),))
     g! = (outjac, p) -> (ForwardDiff.jacobian!(outjac, f, p); outjac = outjac')
     g = OutOfPlace(g!, (length(x0), length(p0)))
-    h! = (outjac2, p) -> (ForwardDiff.jacobian!(outjac2, g, p);
-    reshape(outjac2', length(p0), length(p0), length(x0)))
+    h! =
+        (outjac2, p) -> (
+            ForwardDiff.jacobian!(outjac2, g, p);
+            reshape(outjac2', length(p0), length(p0), length(x0))
+        )
     h!
 end
 
