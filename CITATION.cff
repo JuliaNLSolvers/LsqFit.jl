@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: LsqFit.jl
+message: 'If you use this software, please cite it using the metadata from this file.'
+type: software
+authors:
+  - given-names: John
+    family-names: Myles White
+    email: jmw@johnmyleswhite.com
+  - given-names: Patrick Kofod
+    family-names: Mogensen
+repository-code: 'https://github.com/JuliaNLSolvers/LsqFit.jl'
+abstract: Simple curve fitting in Julia
+license: MIT

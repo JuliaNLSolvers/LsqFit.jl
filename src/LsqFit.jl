@@ -4,6 +4,9 @@ export curve_fit,
     margin_error,
     make_hessian,
     Avv,
+    # ADTypes reexports
+    AutoFiniteDiff,
+    AutoForwardDiff,
     # StatsAPI reexports
     dof,
     coef,
@@ -16,6 +19,7 @@ export curve_fit,
     residuals,
     vcov
 
+using ADTypes: AbstractADType, AutoFiniteDiff, AutoForwardDiff
 using Distributions
 using LinearAlgebra
 using ForwardDiff
