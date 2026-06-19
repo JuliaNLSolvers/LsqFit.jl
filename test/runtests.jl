@@ -4,7 +4,8 @@
 using LsqFit, Test, LinearAlgebra
 using NLSolversBase
 
-my_tests = ["curve_fit.jl", "levenberg_marquardt.jl", "curve_fit_inplace.jl", "geodesic.jl"]
+my_tests =
+    ["curve_fit.jl", "levenberg_marquardt.jl", "curve_fit_inplace.jl", "geodesic.jl", "qa.jl"]
 
 println("Running tests:")
 
