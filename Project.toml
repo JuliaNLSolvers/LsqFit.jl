@@ -13,16 +13,24 @@ StatsAPI = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
 
 [compat]
 ADTypes = "1"
+Aqua = "0.8"
 Distributions = "0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25"
 ForwardDiff = "0.10, 1.0"
+JET = "0.9, 0.10, 0.11"
+LinearAlgebra = "1"
 NLSolversBase = "8"
+Printf = "1"
+StableRNGs = "1"
 StatsAPI = "1"
+Test = "1"
 julia = "1.10"
 
 [extras]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["ADTypes", "Test", "StableRNGs"]
+test = ["ADTypes", "Test", "StableRNGs", "Aqua", "JET"]
