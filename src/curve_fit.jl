@@ -9,9 +9,8 @@ end
 
 StatsAPI.coef(lfr::LsqFitResult) = lfr.param
 StatsAPI.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
-# For `FrequencyWeights` each weight is a repeat count, so the number of
-# observations is the sum of the counts; for every other weighting it is the
-# number of residuals.
+# With FrequencyWeights each weight is a count, so nobs is their sum; otherwise
+# it is the number of residuals.
 StatsAPI.nobs(lfr::LsqFitResult) = _nobs(lfr.wt, lfr.resid)
 _nobs(wt, resid) = length(resid)
 _nobs(wt::FrequencyWeights, resid) = sum(wt)
@@ -194,33 +193,28 @@ additionally, it is possible to query the degrees of freedom with
 * `dof(fit)`
 * `coef(fit)`
 
-## Weights and what they mean
+## Weights
 
-The *values* you pass are always in **inverse-variance** units, never standard
-deviations:
+The values of `wt` are inverse variances, not standard deviations. A vector
+weights the squared residuals `∑ wtᵢ (model−y)ᵢ²`, so the optimal choice is
+`wtᵢ = 1/σᵢ²`. A matrix is the inverse covariance `Σ⁻¹` of the observations (a
+diagonal of `1/σᵢ²` is the vector case).
 
-* a **vector** `wt` weights the squared residuals, `∑ wtᵢ (model−y)²ᵢ`, so the
-  optimal choice is the **inverse variance** `wtᵢ = 1/σᵢ²` (not `1/σᵢ`);
-* a **matrix** `wt` is the **inverse covariance** of the observations, `Σ⁻¹`
-  (a diagonal matrix of `1/σᵢ²` is exactly the vector case).
+The type of `wt` sets whether the residual scale `σ²` is known or estimated:
 
-What changes the reported uncertainty is the *type* of `wt`, which states
-whether the residual scale `σ²` is known or estimated:
+| `wt` | scale `σ²` | `vcov(fit)` |
+|:-----|:-----------|:------------|
+| omitted | estimated | `σ̂² (JᵀJ)⁻¹` |
+| `1 ./ σ.^2` (vector) | known | `(JᵀWJ)⁻¹` |
+| `inv(Σ)` (matrix) | known | `(JᵀWJ)⁻¹` |
+| `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` |
+| `FrequencyWeights(counts)` | estimated, `nobs=∑w` | `σ̂² (JᵀWJ)⁻¹` |
 
-| `wt`                                  | residual scale `σ²` | `vcov(fit)`        |
-|:--------------------------------------|:--------------------|:-------------------|
-| omitted (unweighted)                  | estimated           | `σ̂² (JᵀJ)⁻¹`       |
-| bare vector `1 ./ σ.^2`               | known (`≡ 1`)       | `(JᵀWJ)⁻¹`         |
-| matrix `inv(Σ)`                       | known (`≡ 1`)       | `(JᵀWJ)⁻¹`         |
-| `AnalyticWeights(1 ./ σ.^2)`          | estimated           | `σ̂² (JᵀWJ)⁻¹`      |
-| `FrequencyWeights(counts)`            | estimated, `nobs=∑w`| `σ̂² (JᵀWJ)⁻¹`      |
-
-`AnalyticWeights` are *relative* inverse-variance (reliability/precision)
-weights and are scale-invariant — this matches the convention used by MATLAB
-`nlinfit`, Origin and LabPlot. A bare vector instead asserts that you know the
-exact inverse variances. `vcov(fit)` returns the parameter **covariance** matrix
-and `stderror(fit)` its diagonal **standard deviations** (`√diag`). See the
-"Weights" page of the manual for the full derivation and Monte-Carlo coverage.
+`AnalyticWeights` are relative inverse-variance weights and do not depend on the
+overall scale of the weights, matching MATLAB `nlinfit`, Origin and LabPlot. A
+bare vector is taken as the exact inverse variances. `vcov(fit)` is the parameter
+covariance and `stderror(fit)` its square-rooted diagonal. The "Weights" page of
+the manual has the derivation and a coverage check.
 
 ## Example
 ```julia
@@ -374,23 +368,16 @@ function curve_fit(
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-# Whether the overall residual scale (variance) σ² is *estimated* from the fit
-# and multiplied into the covariance (`σ̂² · (JᵀWJ)⁻¹`), or assumed *known* and
-# equal to one because the supplied weights already are the exact inverse
-# (co)variance (`(JᵀWJ)⁻¹`). See the "Weights" section of the manual.
-#
-#   - unweighted fit ............... estimate  (the classic σ̂² = RSS/(n−p))
-#   - bare inverse-variance vector . known     (you asserted the exact 1/σ²ᵢ)
-#   - inverse-covariance matrix .... known     (you asserted the exact Σ⁻¹)
-#   - AnalyticWeights .............. estimate  (relative precision; scale-invariant)
-#   - FrequencyWeights ............. estimate  (repeat counts; nobs = ∑w)
+# Whether the residual scale σ² is estimated from the fit and multiplied into the
+# covariance, or assumed known because the weights are the exact inverse
+# (co)variance. Unweighted, AnalyticWeights and FrequencyWeights estimate it; a
+# bare vector or matrix takes it as known.
 _estimates_scale(wt::AbstractVector) = isempty(wt)
 _estimates_scale(wt::AbstractMatrix) = false
 _estimates_scale(wt::AnalyticWeights) = true
 _estimates_scale(wt::FrequencyWeights) = true
-# `ProbabilityWeights` need a sandwich/survey variance and `Weights` carries no
-# covariance semantics (StatsBase itself refuses a bias correction for it), so
-# we refuse rather than return a silently wrong covariance.
+# ProbabilityWeights need a survey/sandwich variance and Weights has no bias
+# correction in StatsBase, so error instead of returning a mismatched covariance.
 function _estimates_scale(wt::Union{ProbabilityWeights,Weights})
     throw(
         ArgumentError(
@@ -403,20 +390,15 @@ function _estimates_scale(wt::Union{ProbabilityWeights,Weights})
 end
 
 function StatsAPI.vcov(fit::LsqFitResult)
-    # computes covariance matrix of fit parameters
-
-    # The covariance is built from the QR decomposition of the (weight-folded)
-    # Jacobian, which is numerically more stable than forming and inverting
-    # JᵀJ directly (note inv(JᵀJ) == inv(RᵀR) == Rinv * Rinv'). Because the
-    # weights are folded into the residuals and hence into J, JᵀJ already
-    # equals Jrawᵀ W Jraw.
+    # Covariance from the QR decomposition of the (weight-folded) Jacobian, which
+    # is more stable than inverting JᵀJ directly (inv(JᵀJ) == Rinv * Rinv'). The
+    # weights are folded into J, so JᵀJ already equals Jrawᵀ W Jraw.
     J = fit.jacobian
     Q, R = qr(J)
     Rinv = inv(R)
     covar = Rinv * Rinv'
 
-    # Multiply by the estimated residual variance only when the scale is not
-    # assumed known from the weights (see `_estimates_scale`).
+    # Scale by the estimated residual variance unless the weights fix it.
     if _estimates_scale(fit.wt)
         covar = covar * mse(fit)
     end
@@ -444,19 +426,10 @@ function StatsAPI.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
     return sqrt.(abs.(vars))
 end
 
-# Reference distribution for confidence intervals / margins of error.
-#
-# Untyped weight inputs (a bare vector, an inverse-covariance matrix) and the
-# unweighted case keep the Student-t reference for backwards compatibility, even
-# when the scale is known (for which the normal would be the asymptotically
-# correct choice — see the "Weights" manual page). This makes those intervals
-# mildly conservative but never anti-conservative, and preserves historical
-# behaviour.
-#
-# Typed `AbstractWeights` instead select the asymptotically-correct reference:
-# Student-t when the scale is estimated (`AnalyticWeights`, `FrequencyWeights`)
-# and the standard normal when it is known. The normal branch is therefore only
-# reachable through a typed, known-scale weight.
+# Reference distribution for confidence intervals and margins of error. Untyped
+# inputs (bare vector, matrix) and the unweighted case keep Student-t for
+# backwards compatibility. Typed weights use Student-t when the scale is
+# estimated and the normal quantile when it is known.
 _ci_dist(fit::LsqFitResult) = _ci_dist(fit.wt, dof(fit))
 _ci_dist(wt, dof) = TDist(dof)
 _ci_dist(wt::AbstractWeights, dof) = _estimates_scale(wt) ? TDist(dof) : Normal()

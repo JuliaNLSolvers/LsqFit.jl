@@ -321,9 +321,9 @@ The covariance matrix is now:
 ```
 
 
-This is the case in which you **know the error variances exactly**. Pass them
-as a bare vector `1 ./ var(ε)` or, for correlated errors, as the inverse
-covariance matrix `inv(cov_ε)`:
+This is the case in which the error variances are known exactly. Pass them as a
+bare vector `1 ./ var(ε)`, or as the inverse covariance matrix `inv(cov_ε)` for
+correlated errors:
 
 ```Julia
 wt = inv(cov_ε)
@@ -331,33 +331,29 @@ fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
 
-If instead you only know **the relative ratio of the variances**, i.e.
-``ε \sim N(0, σ^2 W^{-1})`` with an unknown common scale ``σ^2``, the covariance
-matrix is
+If the variances are known only up to a common factor,
+``ε \sim N(0, σ^2 W^{-1})`` with unknown ``σ^2``, the covariance is
 
 ```math
 \mathbf{Cov}(\boldsymbol{γ}^*) = σ^2[J'WJ]^{-1}
 ```
 
-where ``σ^2`` is **estimated** from the residuals. This is what MATLAB
-`nlinfit`, Origin and LabPlot do, and it is requested by wrapping the same
-inverse-variance numbers in [`AnalyticWeights`](@ref):
+with ``σ^2`` estimated from the residuals. This is what MATLAB `nlinfit`, Origin
+and LabPlot do. Wrap the same inverse-variance numbers in
+[`AnalyticWeights`](@ref) to get it:
 
 ```Julia
 fit = curve_fit(m, tdata, ydata, AnalyticWeights(1 ./ var(ε)), p0)
 ```
 
-Because the scale is estimated, `AnalyticWeights` are **scale-invariant**:
-multiplying every weight by a constant leaves `vcov(fit)` unchanged, and uniform
+`AnalyticWeights` do not depend on the overall scale of the weights, so uniform
 weights reproduce the unweighted fit.
 
-!!! warning "A bare vector and `AnalyticWeights` are not the same"
-    A **bare vector** treats the weights as the *exact* inverse variances
-    (`σ² ≡ 1`, no scale estimated). `AnalyticWeights` treats them as *relative*
-    precisions and estimates the scale. They give different `stderror`s. Passing
-    a vector of ones is therefore *not* equivalent to an unweighted fit, but
-    `AnalyticWeights(ones(n))` is. See the [Weights](@ref) page for a full
-    treatment with Monte-Carlo coverage checks.
+A bare vector and `AnalyticWeights` are not the same: the bare vector takes the
+weights as exact inverse variances (no scale estimated), `AnalyticWeights` takes
+them as relative precisions and estimates the scale, and they give different
+standard errors. A vector of ones is not equivalent to an unweighted fit, but
+`AnalyticWeights(ones(n))` is. The [Weights](@ref) page covers this in detail.
 
 !!! note
     If the weight matrix is not a diagonal matrix, General Least Squares will be performed.
