@@ -12,6 +12,7 @@ makedocs(
         "Home"=>"index.md",
         "Getting Started"=>"getting_started.md",
         "Tutorial"=>"tutorial.md",
+        "Weights"=>"weights.md",
         "API References"=>"api.md",
     ],
 )

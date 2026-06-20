@@ -321,26 +321,43 @@ The covariance matrix is now:
 ```
 
 
-If we only know **the relative ratio of different variances**, i.e. ``ε \sim N(0, σ^2 W^{-1})``, the covariance matrix will be:
-
-```math
-\mathbf{Cov}(\boldsymbol{γ}^*) = σ^2[J'WJ]^{-1}
-```
-
-where ``σ^2`` is estimated. In this case, if we set ``W = I``, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of the estimated parameter is calculated as ``[J'WJ]^{-1}``.
-
-Note that `fit.jacobian` already has the weights folded in (the residuals, and therefore the Jacobian, are scaled by ``\sqrt{W}``). So in terms of the stored Jacobian the implementation simply computes `inv(J'J)`, which equals ``[J_\text{raw}'WJ_\text{raw}]^{-1}``. No mean-squared-error factor is applied in the weighted case, which is why passing a weight vector of ones is **not** equivalent to an unweighted fit for covariance purposes (see the note below).
-
-!!! note
-    Passing vector of ones as the weight vector will cause mistakes in covariance estimation.
-
-Pass the vector of `1 ./ var(ε)` or the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
+This is the case in which you **know the error variances exactly**. Pass them
+as a bare vector `1 ./ var(ε)` or, for correlated errors, as the inverse
+covariance matrix `inv(cov_ε)`:
 
 ```Julia
 wt = inv(cov_ε)
 fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
+
+If instead you only know **the relative ratio of the variances**, i.e.
+``ε \sim N(0, σ^2 W^{-1})`` with an unknown common scale ``σ^2``, the covariance
+matrix is
+
+```math
+\mathbf{Cov}(\boldsymbol{γ}^*) = σ^2[J'WJ]^{-1}
+```
+
+where ``σ^2`` is **estimated** from the residuals. This is what MATLAB
+`nlinfit`, Origin and LabPlot do, and it is requested by wrapping the same
+inverse-variance numbers in [`AnalyticWeights`](@ref):
+
+```Julia
+fit = curve_fit(m, tdata, ydata, AnalyticWeights(1 ./ var(ε)), p0)
+```
+
+Because the scale is estimated, `AnalyticWeights` are **scale-invariant**:
+multiplying every weight by a constant leaves `vcov(fit)` unchanged, and uniform
+weights reproduce the unweighted fit.
+
+!!! warning "A bare vector and `AnalyticWeights` are not the same"
+    A **bare vector** treats the weights as the *exact* inverse variances
+    (`σ² ≡ 1`, no scale estimated). `AnalyticWeights` treats them as *relative*
+    precisions and estimates the scale. They give different `stderror`s. Passing
+    a vector of ones is therefore *not* equivalent to an unweighted fit, but
+    `AnalyticWeights(ones(n))` is. See the [Weights](@ref) page for a full
+    treatment with Monte-Carlo coverage checks.
 
 !!! note
     If the weight matrix is not a diagonal matrix, General Least Squares will be performed.
