@@ -445,12 +445,21 @@ function StatsAPI.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
 end
 
 # Reference distribution for confidence intervals / margins of error.
-# When the residual scale σ² is estimated (unweighted, `AnalyticWeights`,
-# `FrequencyWeights`) the standardized estimate follows Student-t with `dof`
-# degrees of freedom. When σ² is known (a bare inverse-variance vector or an
-# inverse-covariance matrix) there is no estimated scale, so the estimate is
-# asymptotically standard normal and the normal (asymptotic) quantile is used.
-_ci_dist(fit::LsqFitResult) = _estimates_scale(fit.wt) ? TDist(dof(fit)) : Normal()
+#
+# Untyped weight inputs (a bare vector, an inverse-covariance matrix) and the
+# unweighted case keep the Student-t reference for backwards compatibility, even
+# when the scale is known (for which the normal would be the asymptotically
+# correct choice — see the "Weights" manual page). This makes those intervals
+# mildly conservative but never anti-conservative, and preserves historical
+# behaviour.
+#
+# Typed `AbstractWeights` instead select the asymptotically-correct reference:
+# Student-t when the scale is estimated (`AnalyticWeights`, `FrequencyWeights`)
+# and the standard normal when it is known. The normal branch is therefore only
+# reachable through a typed, known-scale weight.
+_ci_dist(fit::LsqFitResult) = _ci_dist(fit.wt, dof(fit))
+_ci_dist(wt, dof) = TDist(dof)
+_ci_dist(wt::AbstractWeights, dof) = _estimates_scale(wt) ? TDist(dof) : Normal()
 
 function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
     # computes margin of error at alpha significance level from

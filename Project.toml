@@ -1,6 +1,6 @@
 name = "LsqFit"
 uuid = "2fda8390-95c7-5789-9bda-21331edee243"
-version = "0.16.0"
+version = "0.17.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"

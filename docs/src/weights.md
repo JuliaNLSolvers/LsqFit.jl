@@ -210,31 +210,33 @@ At larger `N` (30 000 in our reference run) the coverages settle to roughly:
 
 | 95 % CIs | A | B |
 |:---------|:--|:--|
-| bare vector (known variance) | ≈ 95 % | ≈ 95 % |
+| bare vector (known variance) | ≈ 97 % | ≈ 97 % |
 | `AnalyticWeights` (estimate scale) | ≈ 95 % | ≈ 95 % |
 | unweighted (ignores heteroscedasticity) | mis-calibrated | mis-calibrated |
 
 Reading the table:
 
-* **Both weighted interpretations hit the nominal 95 %.** They differ only in the
-  reference distribution LsqFit uses for the interval, and each uses the correct
-  one for its assumption:
-  * `AnalyticWeights` **estimate** the scale, so `(γ̂ₖ − γₖ)/seₖ` follows
-    Student-t with `dof = n − p`; [`confint`](@ref) uses Student-t and the
-    interval is calibrated.
-  * A bare vector treats the variance as **known**, so the same ratio is
-    asymptotically standard normal; [`confint`](@ref) uses the normal
-    (asymptotic) quantile `z` here. Using Student-t instead would inflate the
-    interval by `t(n−p)/z` (here `2.16/1.96 ≈ 1.10`) and over-cover at ≈ 97 %,
-    which is why the normal quantile is the right choice when σ² is supplied.
+* **`AnalyticWeights` hit the nominal 95 % almost exactly.** The scale is
+  estimated, so `(γ̂ₖ − γₖ)/seₖ` follows Student-t with `dof = n − p`;
+  [`confint`](@ref) uses Student-t and the interval is calibrated.
+* **The bare vector slightly over-covers — and the cause is the interval
+  multiplier, not the covariance.** When the variance is genuinely known there is
+  no estimated scale, so the asymptotically-correct multiplier is the normal
+  `z = 1.96`. For backwards compatibility [`confint`](@ref) keeps the Student-t
+  reference (`t(n−p) = 2.16` here) for a bare vector, inflating the interval by
+  `t/z ≈ 1.10` and lifting coverage to ≈ 97 %. This is mildly **conservative**
+  (never anti-conservative). The standard errors themselves are exact: swapping
+  in the normal quantile recovers 95 % precisely.
 * **Ignoring the known heteroscedasticity is mis-calibrated.** This is the case
   that is actually "wrong" — not the choice between the two weighted formulas.
 
 !!! note "Which quantile LsqFit uses"
-    `margin_error`/`confint` pick the reference distribution from the weight type:
-    Student-t (`dof = n − p`) when the scale is estimated (unweighted,
-    `AnalyticWeights`, `FrequencyWeights`) and the standard normal when the scale
-    is known (bare vector or inverse-covariance matrix).
+    `margin_error`/`confint` use Student-t (`dof = n − p`) for the unweighted case
+    and for untyped weight inputs (a bare vector or an inverse-covariance matrix),
+    preserving historical behaviour. Typed `AbstractWeights` select the
+    asymptotically-correct reference instead: Student-t when the scale is
+    estimated (`AnalyticWeights`, `FrequencyWeights`) and the standard normal when
+    it is known.
 
 This is the empirical version of the conclusion reached in the issue discussion:
 *both* weighted interpretations are valid; what matters is matching the
