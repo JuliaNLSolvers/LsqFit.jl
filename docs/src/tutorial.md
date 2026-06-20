@@ -327,7 +327,9 @@ If we only know **the relative ratio of different variances**, i.e. ``ε \sim N(
 \mathbf{Cov}(\boldsymbol{γ}^*) = σ^2[J'WJ]^{-1}
 ```
 
-where ``σ^2`` is estimated. In this case, if we set ``W = I``, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of the estimated parameter is calculated as `covar = inv(J'*fit.wt*J)`.
+where ``σ^2`` is estimated. In this case, if we set ``W = I``, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of the estimated parameter is calculated as ``[J'WJ]^{-1}``.
+
+Note that `fit.jacobian` already has the weights folded in (the residuals, and therefore the Jacobian, are scaled by ``\sqrt{W}``). So in terms of the stored Jacobian the implementation simply computes `inv(J'J)`, which equals ``[J_\text{raw}'WJ_\text{raw}]^{-1}``. No mean-squared-error factor is applied in the weighted case, which is why passing a weight vector of ones is **not** equivalent to an unweighted fit for covariance purposes (see the note below).
 
 !!! note
     Passing vector of ones as the weight vector will cause mistakes in covariance estimation.
