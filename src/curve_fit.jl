@@ -343,17 +343,22 @@ end
 
 function StatsAPI.vcov(fit::LsqFitResult)
     # computes covariance matrix of fit parameters
+
+    # Both branches use the QR decomposition of the Jacobian, which is
+    # numerically more stable than forming and inverting J'J directly
+    # (note inv(J'J) == inv(R'R) == Rinv * Rinv').
     J = fit.jacobian
+    Q, R = qr(J)
+    Rinv = inv(R)
+    covar = Rinv * Rinv'
 
+    # In the weighted case the weights are folded into the residuals and
+    # hence into J (so J'J == Jraw' * W * Jraw). They are treated as the
+    # known inverse (co)variance, the residual scale is fixed to one, and
+    # no further variance estimate is applied. In the unweighted case the
+    # residual variance is unknown and estimated by the mean squared error.
     if isempty(fit.wt)
-        r = fit.resid
-
-        # compute the covariance matrix from the QR decomposition
-        Q, R = qr(J)
-        Rinv = inv(R)
-        covar = Rinv * Rinv' * mse(fit)
-    else
-        covar = inv(J' * J)
+        covar = covar * mse(fit)
     end
 
     return covar

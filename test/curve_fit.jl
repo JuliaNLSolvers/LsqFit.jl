@@ -107,6 +107,41 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
 
 end
 
+# Covariance of weighted fits, see #255. The weights are folded into the
+# Jacobian, so they are treated as the known inverse variance and the weighted
+# covariance is *not* scaled by the mean squared error. This documents the
+# intentional difference from the unweighted case and guards the QR refactor.
+@testset "weighted vcov (#255)" begin
+    model(x, p) = p[1] .* exp.(-x .* p[2])
+
+    rng = StableRNG(125)
+    xdata = range(0, stop = 10, length = 20)
+    σ = 0.05
+    ydata = model(xdata, [1.0, 2.0]) + σ * randn(rng, length(xdata))
+    p0 = [0.5, 0.5]
+
+    wt = fill(1 / σ^2, length(xdata))
+    fit = curve_fit(model, xdata, ydata, wt, p0)
+
+    # QR-based covariance equals the algebraic inv(J'J); J already carries the
+    # weights, so this is the known-inverse-variance covariance with no MSE.
+    J = fit.jacobian
+    @test vcov(fit) ≈ inv(J' * J)
+    @test vcov(fit) ≉ inv(J' * J) * LsqFit.mse(fit)
+
+    # Vector weights and the equivalent diagonal matrix weights agree.
+    fit_mat = curve_fit(model, xdata, ydata, LinearAlgebra.diagm(wt), p0)
+    @test vcov(fit) ≈ vcov(fit_mat)
+
+    # Weights of one give the same parameter estimates as an unweighted fit,
+    # but a different covariance: the unweighted case additionally estimates
+    # the residual variance via the MSE (#255).
+    fit_ones = curve_fit(model, xdata, ydata, ones(length(xdata)), p0)
+    fit_unwt = curve_fit(model, xdata, ydata, p0)
+    @test fit_ones.param ≈ fit_unwt.param
+    @test vcov(fit_ones) ≈ vcov(fit_unwt) / LsqFit.mse(fit_unwt)
+end
+
 @testset "autodiff" begin
     model(x, p) = p[1] .* exp.(-x .* p[2])
     rng = StableRNG(125)
