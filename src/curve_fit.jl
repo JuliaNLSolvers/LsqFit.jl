@@ -207,14 +207,20 @@ The type of `wt` sets whether the residual scale `σ²` is known or estimated:
 | omitted | estimated | `σ̂² (JᵀJ)⁻¹` |
 | `1 ./ σ.^2` (vector) | known | `(JᵀWJ)⁻¹` |
 | `inv(Σ)` (matrix) | known | `(JᵀWJ)⁻¹` |
+| `PrecisionWeights(1 ./ σ.^2)` | known | `(JᵀWJ)⁻¹` |
+| `PrecisionMatrix(inv(Σ))` | known | `(JᵀWJ)⁻¹` |
 | `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` |
 | `FrequencyWeights(counts)` | estimated, `nobs=∑w` | `σ̂² (JᵀWJ)⁻¹` |
 
 `AnalyticWeights` are relative inverse-variance weights and do not depend on the
-overall scale of the weights, matching MATLAB `nlinfit`, Origin and LabPlot. A
-bare vector is taken as the exact inverse variances. `vcov(fit)` is the parameter
-covariance and `stderror(fit)` its square-rooted diagonal. The "Weights" page of
-the manual has the derivation and a coverage check.
+overall scale of the weights, matching MATLAB `nlinfit`, Origin and LabPlot.
+`PrecisionWeights` (and a bare vector) are the exact inverse variances and
+`PrecisionMatrix` (and a bare matrix) the exact inverse covariance, with the
+scale known. The typed forms (`PrecisionWeights`, `PrecisionMatrix`) use the
+normal critical value for confidence intervals; the bare vector and matrix keep
+Student-t. `vcov(fit)` is the parameter covariance and `stderror(fit)` its
+square-rooted diagonal. The "Weights" page of the manual has the derivation and a
+coverage check.
 
 ## Example
 ```julia
@@ -368,14 +374,53 @@ function curve_fit(
     lmfit(f, g, p0, wt; kwargs...)
 end
 
+"""
+    PrecisionWeights(vs)
+
+Weights whose values are the exact, known inverse variances `1 ./ σ.^2` of the
+observations. The residual scale is treated as known rather than estimated, so
+`vcov` is `(JᵀWJ)⁻¹` with no mean-squared-error factor and confidence intervals
+use the normal (asymptotic) critical value.
+
+This is the typed equivalent of passing a bare inverse-variance vector. Use
+`AnalyticWeights` instead when the weights are only relative precisions and the
+scale should be estimated.
+"""
+struct PrecisionWeights{S<:Real,T<:Real,V<:AbstractVector{T}} <: AbstractWeights{S,T,V}
+    values::V
+    sum::S
+end
+function PrecisionWeights(vs::AbstractVector{<:Real})
+    s = sum(vs)
+    return PrecisionWeights{typeof(s),eltype(vs),typeof(vs)}(vs, s)
+end
+
+"""
+    PrecisionMatrix(m)
+
+The exact, known **precision matrix** (inverse covariance) `inv(Σ)` of correlated
+observations. This is the matrix counterpart of [`PrecisionWeights`](@ref): the
+residual scale is treated as known, so `vcov` is `(JᵀWJ)⁻¹` with no
+mean-squared-error factor and confidence intervals use the normal critical value.
+
+!!! note
+    The argument is the precision matrix `inv(Σ)`, not the covariance `Σ`.
+"""
+struct PrecisionMatrix{T,M<:AbstractMatrix{T}} <: AbstractMatrix{T}
+    values::M
+end
+Base.size(pm::PrecisionMatrix) = size(pm.values)
+Base.getindex(pm::PrecisionMatrix, i::Int, j::Int) = pm.values[i, j]
+
 # Whether the residual scale σ² is estimated from the fit and multiplied into the
 # covariance, or assumed known because the weights are the exact inverse
 # (co)variance. Unweighted, AnalyticWeights and FrequencyWeights estimate it; a
-# bare vector or matrix takes it as known.
+# bare vector or matrix, PrecisionWeights or PrecisionMatrix, takes it as known.
 _estimates_scale(wt::AbstractVector) = isempty(wt)
 _estimates_scale(wt::AbstractMatrix) = false
 _estimates_scale(wt::AnalyticWeights) = true
 _estimates_scale(wt::FrequencyWeights) = true
+_estimates_scale(wt::PrecisionWeights) = false
 # ProbabilityWeights need a survey/sandwich variance and Weights has no bias
 # correction in StatsBase, so error instead of returning a mismatched covariance.
 function _estimates_scale(wt::Union{ProbabilityWeights,Weights})
@@ -428,11 +473,12 @@ end
 
 # Reference distribution for confidence intervals and margins of error. Untyped
 # inputs (bare vector, matrix) and the unweighted case keep Student-t for
-# backwards compatibility. Typed weights use Student-t when the scale is
-# estimated and the normal quantile when it is known.
+# backwards compatibility. Typed inputs use Student-t when the scale is estimated
+# and the normal quantile when it is known.
 _ci_dist(fit::LsqFitResult) = _ci_dist(fit.wt, dof(fit))
 _ci_dist(wt, dof) = TDist(dof)
 _ci_dist(wt::AbstractWeights, dof) = _estimates_scale(wt) ? TDist(dof) : Normal()
+_ci_dist(wt::PrecisionMatrix, dof) = Normal()
 
 function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
     # computes margin of error at alpha significance level from

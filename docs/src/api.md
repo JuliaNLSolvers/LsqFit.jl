@@ -5,3 +5,10 @@ Private = false
 Pages   = ["curve_fit.jl"]
 Order   = [:function]
 ```
+
+## Weight types
+
+```@docs
+PrecisionWeights
+PrecisionMatrix
+```

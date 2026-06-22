@@ -340,7 +340,7 @@ If the variances are known only up to a common factor,
 
 with ``σ^2`` estimated from the residuals. This is what MATLAB `nlinfit`, Origin
 and LabPlot do. Wrap the same inverse-variance numbers in
-[`AnalyticWeights`](@ref) to get it:
+`AnalyticWeights` to get it:
 
 ```Julia
 fit = curve_fit(m, tdata, ydata, AnalyticWeights(1 ./ var(ε)), p0)

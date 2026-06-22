@@ -18,6 +18,8 @@ export curve_fit,
     weights,
     residuals,
     vcov,
+    PrecisionWeights,
+    PrecisionMatrix,
     # StatsBase weight-type reexports
     AnalyticWeights,
     FrequencyWeights,

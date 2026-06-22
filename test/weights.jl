@@ -45,6 +45,30 @@ using LsqFit, Test, LinearAlgebra, StableRNGs
         @test stderror(fit_known) ≈ sqrt.(diag(vcov(fit_known)))
     end
 
+    @testset "PrecisionWeights match the bare vector with a normal CI" begin
+        fit_var = curve_fit(model, x, y, PrecisionWeights(wt), p0)
+        # same known-variance covariance as the bare vector
+        @test coef(fit_var) ≈ coef(fit_known) rtol = 1e-8
+        @test vcov(fit_var) ≈ vcov(fit_known) rtol = 1e-8
+        @test stderror(fit_var) ≈ stderror(fit_known) rtol = 1e-8
+        # but a tighter (normal) confidence interval than the bare vector's t
+        wid(f) = [hi - lo for (lo, hi) in confint(f; level = 0.95)]
+        @test all(wid(fit_var) .< wid(fit_known))
+    end
+
+    @testset "PrecisionMatrix matches a bare matrix with a normal CI" begin
+        M = LinearAlgebra.diagm(wt)                         # diagonal precision matrix
+        fit_mat = curve_fit(model, x, y, M, p0)            # bare matrix
+        fit_pm = curve_fit(model, x, y, PrecisionMatrix(M), p0)
+        # a diagonal precision matrix equals the bare-vector / PrecisionWeights fit
+        @test coef(fit_pm) ≈ coef(fit_known) rtol = 1e-8
+        @test vcov(fit_pm) ≈ vcov(fit_known) rtol = 1e-8
+        @test vcov(fit_pm) ≈ vcov(fit_mat) rtol = 1e-8
+        # PrecisionMatrix uses the normal CI, the bare matrix keeps Student-t
+        wid(f) = [hi - lo for (lo, hi) in confint(f; level = 0.95)]
+        @test all(wid(fit_pm) .< wid(fit_mat))
+    end
+
     @testset "FrequencyWeights count observations" begin
         counts = [3, 1, 1, 2, 1]
         fit_freq = curve_fit(model, x, y, FrequencyWeights(counts), p0)

@@ -58,7 +58,8 @@ If the variances are known only up to a common unknown factor,
 \mathbf{Cov}(\boldsymbol{γ}^*) = σ^2 [J'WJ]^{-1},
 ```
 
-with `σ²` estimated from the residuals as `σ̂² = `RSS`/(n-p)` ([`LsqFit.mse`](@ref)).
+with `σ²` estimated from the residuals as the mean squared error `RSS/(n-p)`
+(`LsqFit.mse`).
 The same `σ²` multiplies the whole matrix, so this estimator does not change if
 all weights are multiplied by a constant. The unweighted fit is the case `W = I`
 of this second formula.
@@ -75,25 +76,36 @@ inverse variances in every case.
 | omitted | estimated | `σ̂² (JᵀJ)⁻¹` | `n` |
 | `1 ./ σ.^2` (`Vector`) | known | `(JᵀWJ)⁻¹` | `n` |
 | `inv(Σ)` (`Matrix`) | known | `(JᵀWJ)⁻¹` | `n` |
-| [`AnalyticWeights`](@ref)`(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `n` |
-| [`FrequencyWeights`](@ref)`(counts)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `∑w` |
+| [`PrecisionWeights`](@ref)`(1 ./ σ.^2)` | known | `(JᵀWJ)⁻¹` | `n` |
+| [`PrecisionMatrix`](@ref)`(inv(Σ))` | known | `(JᵀWJ)⁻¹` | `n` |
+| `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `n` |
+| `FrequencyWeights(counts)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `∑w` |
 
-The typed weights are re-exported from
+`AnalyticWeights`, `FrequencyWeights` are re-exported from
 [StatsBase](https://juliastats.org/StatsBase.jl/stable/weights/) and keep their
-StatsBase meaning:
+StatsBase meaning; `PrecisionWeights` and `PrecisionMatrix` are defined by LsqFit.
 
+* `PrecisionWeights` are the exact, known inverse variances (independent errors)
+  and `PrecisionMatrix` the exact, known precision matrix `inv(Σ)` (correlated
+  errors). The scale is known, so `vcov` has no MSE factor and the confidence
+  interval uses the normal critical value. They are the typed forms of a bare
+  vector and a bare matrix.
 * `AnalyticWeights` are reliability or inverse-variance weights. They give a
   relative importance, so the common scale is estimated and the result does not
   depend on the overall magnitude of the weights. This is the convention used by
   MATLAB `nlinfit`, Origin and LabPlot.
 * `FrequencyWeights` are integer counts: `wᵢ` means observation `i` was seen `wᵢ`
   times, so `nobs = ∑w`.
-* A bare vector or matrix is taken as the exact inverse (co)variance, so the
-  scale is known.
+* A bare vector or matrix is taken as the exact inverse (co)variance, like
+  `PrecisionWeights`/`PrecisionMatrix`, but keeps the Student-t interval for
+  backwards compatibility.
 
-`ProbabilityWeights` would require a survey/sandwich variance, and a generic
-`Weights` has no associated bias correction in StatsBase. Passing either throws
-an error rather than returning a covariance that does not match the type.
+StatsBase has no weight type for the known-variance case (all of its corrected
+weights estimate the scale), which is why `PrecisionWeights`/`PrecisionMatrix`
+are provided here. `ProbabilityWeights` would require a survey/sandwich variance,
+and a generic `Weights` has no associated bias correction in StatsBase. Passing
+either throws an error rather than returning a covariance that does not match the
+type.
 
 ## Example
 
@@ -154,7 +166,7 @@ nobs(fit_freq), dof(fit_freq)
 
 A 95 % confidence interval should contain the true parameter about 95 % of the
 time. The following simulates from a known model with known heteroscedastic
-noise and counts how often [`confint`](@ref) covers the truth.
+noise and counts how often `confint` covers the truth.
 
 ```@example weights
 using Random
@@ -166,47 +178,59 @@ N = 4000
 
 covers(lohi, t) = [lo <= t <= hi for ((lo, hi), t) in zip(lohi, (t[1], t[2]))]
 
-hitK = zeros(2); hitA = zeros(2); hitU = zeros(2)
+hitV = zeros(2); hitK = zeros(2); hitA = zeros(2); hitU = zeros(2)
 for _ in 1:N
     sd = 0.10 .* model(xg, truth)
     yg = model(xg, truth) .+ sd .* randn(rng, length(xg))
     w  = 1 ./ sd.^2
-    fK = curve_fit(model, xg, yg, w, copy(truth))                   # known variance
-    fA = curve_fit(model, xg, yg, AnalyticWeights(w), copy(truth))  # estimate scale
+    fV = curve_fit(model, xg, yg, PrecisionWeights(w), copy(truth))  # known variance, normal CI
+    fK = curve_fit(model, xg, yg, w, copy(truth))                   # known variance, Student-t CI
+    fA = curve_fit(model, xg, yg, AnalyticWeights(w), copy(truth))  # estimated scale
     fU = curve_fit(model, xg, yg, copy(truth))                      # unweighted
+    global hitV += covers(confint(fV; level = 0.95), truth)
     global hitK += covers(confint(fK; level = 0.95), truth)
     global hitA += covers(confint(fA; level = 0.95), truth)
     global hitU += covers(confint(fU; level = 0.95), truth)
 end
-(known = round.(100 .* hitK ./ N; digits = 1),
- analytic = round.(100 .* hitA ./ N; digits = 1),
- unweighted = round.(100 .* hitU ./ N; digits = 1))
+nothing # hide
 ```
 
-At `N = 30 000` the coverages are about:
+```@example weights
+using SummaryTables
 
-| 95 % CIs | A | B |
-|:---------|:--|:--|
-| bare vector (known variance) | 97 % | 97 % |
-| `AnalyticWeights` (estimate scale) | 95 % | 95 % |
-| unweighted (ignores heteroscedasticity) | mis-calibrated | mis-calibrated |
+pct(h) = string(round(100 * h / N; digits = 1), " %")
+covrow(name, h) = [Cell(name) Cell(pct(h[1])) Cell(pct(h[2]))]
+body = vcat(
+    permutedims(Cell.(["weighting", "A coverage", "B coverage"]; bold = true)),
+    covrow("PrecisionWeights (known σ², normal)", hitV),
+    covrow("bare vector (known σ², Student-t)", hitK),
+    covrow("AnalyticWeights (estimated scale)", hitA),
+    covrow("unweighted (ignores heteroscedasticity)", hitU),
+)
+Table(body; header = 1)
+```
 
-`AnalyticWeights` estimate the scale, so `(γ̂ₖ − γₖ)/seₖ` follows Student-t with
-`dof = n − p` and the interval is calibrated. With a known variance the correct
-multiplier is the normal `z = 1.96`, but for backwards compatibility `confint`
-keeps the Student-t reference (`t(13) = 2.16`) for a bare vector, which widens
-the interval by about 10 % and raises coverage to 97 %. The standard errors are
-unchanged; using the normal quantile recovers 95 %. Ignoring known
-heteroscedasticity is the case that is actually wrong.
+`PrecisionWeights` and `AnalyticWeights` are both close to the nominal 95 %, each
+with the reference distribution that matches its assumption. `PrecisionWeights`
+treats the variance as known, so `(γ̂ₖ − γₖ)/seₖ` is asymptotically normal and
+`confint` uses `z = 1.96`. `AnalyticWeights` estimate the scale, so the same
+ratio follows Student-t with `dof = n − p`. A bare vector has the same covariance
+as `PrecisionWeights` but keeps the Student-t reference (`t(13) = 2.16`) for
+backwards compatibility, which widens the interval by about 10 % and lifts its
+coverage above 95 %. Ignoring the known heteroscedasticity is the case that is
+actually wrong.
 
 `margin_error` and `confint` use Student-t for the unweighted case and for
-untyped inputs (a bare vector or a matrix). Typed `AbstractWeights` use Student-t
-when the scale is estimated and the normal quantile when it is known.
+untyped inputs (a bare vector or a matrix). Typed weights use Student-t when the
+scale is estimated (`AnalyticWeights`, `FrequencyWeights`) and the normal
+quantile when it is known (`PrecisionWeights`). So `PrecisionWeights(1 ./ σ.^2)`
+gives the same covariance as the bare vector but the calibrated 95 % interval.
 
 ## Choosing weights
 
-* Known `σᵢ`, trusted as absolute: bare vector `1 ./ σ.^2`, or `inv(Σ)` for
-  correlated errors.
+* Known `σᵢ`, trusted as absolute: `PrecisionWeights(1 ./ σ.^2)`, or
+  `PrecisionMatrix(inv(Σ))` for correlated errors. The bare `1 ./ σ.^2` vector
+  and `inv(Σ)` matrix are equivalent except that their intervals keep Student-t.
 * Only relative precisions known, or results that match MATLAB/Origin/LabPlot:
   `AnalyticWeights(1 ./ σ.^2)`.
 * Repeated or aggregated counts: `FrequencyWeights(counts)`.
