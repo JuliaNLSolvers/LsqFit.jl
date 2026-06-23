@@ -132,24 +132,24 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
 
     println("--------------\nPerformance of curve_fit with weights")
 
-    curve_fit(model, xdata, ydata, 1 ./ yvars, [0.5, 0.5])
+    curve_fit(model, xdata, ydata, PrecisionWeights(1 ./ yvars), [0.5, 0.5])
     curve_fit(
         model_inplace,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         inplace = true,
         maxIter = 100,
     )
 
-    curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5])
+    curve_fit(model, jacobian_model, xdata, ydata, PrecisionWeights(1 ./ yvars), [0.5, 0.5])
     curve_fit(
         model_inplace,
         jacobian_model_inplace,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         inplace = true,
         maxIter = 100,
@@ -162,7 +162,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         maxIter = 100,
     )
@@ -188,7 +188,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
                     jacobian_model,
                     xxdata,
                     yydata,
-                    WWT,
+                    PrecisionWeights(WWT),
                     [0.5, 0.5];
                     maxIter = 100,
                 )
@@ -198,7 +198,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
                     jacobian_model,
                     xxdata,
                     yydata,
-                    WWT,
+                    PrecisionWeights(WWT),
                     [0.5, 0.5];
                     maxIter = 100,
                 )
@@ -211,7 +211,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         model_inplace,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         inplace = true,
         maxIter = 100,
@@ -226,7 +226,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         maxIter = 100,
     )
@@ -238,7 +238,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         jacobian_model_inplace,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         [0.5, 0.5];
         inplace = true,
         maxIter = 100,

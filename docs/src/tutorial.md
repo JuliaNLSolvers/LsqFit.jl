@@ -321,26 +321,44 @@ The covariance matrix is now:
 ```
 
 
-If we only know **the relative ratio of different variances**, i.e. ``ε \sim N(0, σ^2 W^{-1})``, the covariance matrix will be:
+This is the case in which the error variances are known exactly. Wrap them in
+`PrecisionWeights(1 ./ var(ε))`, or in `PrecisionMatrix(inv(cov_ε))` for
+correlated errors:
+
+```Julia
+wt = PrecisionMatrix(inv(cov_ε))
+fit = curve_fit(m, tdata, ydata, wt, p0)
+cov = vcov(fit)
+```
+
+!!! warning "Deprecated"
+    Passing a bare `1 ./ var(ε)` vector or `inv(cov_ε)` matrix still works but is
+    deprecated; use `PrecisionWeights` / `PrecisionMatrix` instead.
+
+If the variances are known only up to a common factor,
+``ε \sim N(0, σ^2 W^{-1})`` with unknown ``σ^2``, the covariance is
 
 ```math
 \mathbf{Cov}(\boldsymbol{γ}^*) = σ^2[J'WJ]^{-1}
 ```
 
-where ``σ^2`` is estimated. In this case, if we set ``W = I``, the result will be the same as the unweighted version. However, `curve_fit()` currently **does not support** this implementation. `curve_fit()` assumes the weight as the inverse of **the error covariance matrix** rather than **the ratio of error covariance matrix**, i.e. the covariance of the estimated parameter is calculated as ``[J'WJ]^{-1}``.
-
-Note that `fit.jacobian` already has the weights folded in (the residuals, and therefore the Jacobian, are scaled by ``\sqrt{W}``). So in terms of the stored Jacobian the implementation simply computes `inv(J'J)`, which equals ``[J_\text{raw}'WJ_\text{raw}]^{-1}``. No mean-squared-error factor is applied in the weighted case, which is why passing a weight vector of ones is **not** equivalent to an unweighted fit for covariance purposes (see the note below).
-
-!!! note
-    Passing vector of ones as the weight vector will cause mistakes in covariance estimation.
-
-Pass the vector of `1 ./ var(ε)` or the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
+with ``σ^2`` estimated from the residuals. This is what MATLAB `nlinfit`, Origin
+and LabPlot do. Wrap the same inverse-variance numbers in
+`AnalyticWeights` to get it:
 
 ```Julia
-wt = inv(cov_ε)
-fit = curve_fit(m, tdata, ydata, wt, p0)
-cov = vcov(fit)
+fit = curve_fit(m, tdata, ydata, AnalyticWeights(1 ./ var(ε)), p0)
 ```
+
+`AnalyticWeights` do not depend on the overall scale of the weights, so uniform
+weights reproduce the unweighted fit.
+
+`PrecisionWeights` and `AnalyticWeights` are not the same: `PrecisionWeights` take
+the weights as exact inverse variances (no scale estimated), `AnalyticWeights` take
+them as relative precisions and estimate the scale, and they give different
+standard errors. `PrecisionWeights(ones(n))` is not equivalent to an unweighted
+fit, but `AnalyticWeights(ones(n))` is. The [Weights](@ref) page covers this in
+detail.
 
 !!! note
     If the weight matrix is not a diagonal matrix, General Least Squares will be performed.
@@ -354,10 +372,11 @@ Set the weight matrix as the inverse of the error covariance matrix (the optimal
 \mathbf{Cov}(\boldsymbol{γ}^*) ≈ [J'WJ]^{-1}J'W \Sigma W'J[J'W'J]^{-1} = [J'WJ]^{-1}
 ```
 
-Pass the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
+Pass the matrix `inv(covar(ε))`, wrapped in `PrecisionMatrix`, as the weight
+parameter (`wt`) to the function `curve_fit()`:
 
 ```Julia
-wt = 1 ./ yvar
+wt = PrecisionMatrix(inv(covar(ε)))
 fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
@@ -373,7 +392,7 @@ Unweighted fitting (OLS) will return the residuals we need, since the estimator 
 
 ```Julia
 fit_OLS = curve_fit(m, tdata, ydata, p0)
-wt = 1 ./ fit_OLS.resid
+wt = AnalyticWeights(1 ./ fit_OLS.resid)
 fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit_WLS)
 ```

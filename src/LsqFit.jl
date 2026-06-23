@@ -17,7 +17,14 @@ export curve_fit,
     stderror,
     weights,
     residuals,
-    vcov
+    vcov,
+    PrecisionWeights,
+    PrecisionMatrix,
+    # StatsBase weight-type reexports
+    AnalyticWeights,
+    FrequencyWeights,
+    ProbabilityWeights,
+    Weights
 
 using ADTypes: AbstractADType, AutoFiniteDiff, AutoForwardDiff
 using Distributions
@@ -29,6 +36,8 @@ using StatsAPI
 import NLSolversBase:
     value, value!, jacobian, jacobian!, value_jacobian!!, OnceDifferentiable
 using StatsAPI: coef, confint, dof, nobs, rss, stderror, weights, residuals, vcov
+using StatsBase:
+    AbstractWeights, AnalyticWeights, FrequencyWeights, ProbabilityWeights, Weights
 
 import Base.summary
 

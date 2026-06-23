@@ -9,7 +9,11 @@ end
 
 StatsAPI.coef(lfr::LsqFitResult) = lfr.param
 StatsAPI.dof(lfr::LsqFitResult) = nobs(lfr) - length(coef(lfr))
-StatsAPI.nobs(lfr::LsqFitResult) = length(lfr.resid)
+# With FrequencyWeights each weight is a count, so nobs is their sum; otherwise
+# it is the number of residuals.
+StatsAPI.nobs(lfr::LsqFitResult) = _nobs(lfr.wt, lfr.resid)
+_nobs(wt, resid) = length(resid)
+_nobs(wt::FrequencyWeights, resid) = sum(wt)
 StatsAPI.rss(lfr::LsqFitResult) = sum(abs2, lfr.resid)
 StatsAPI.weights(lfr::LsqFitResult) = lfr.wt
 StatsAPI.residuals(lfr::LsqFitResult) = lfr.resid
@@ -178,7 +182,7 @@ end
     curve_fit(model, xdata, ydata, wt, p0) -> fit
 
 Fit data to a non-linear `model`. `p0` is an initial model parameter guess (see Example),
-and `wt` is an optional array of weights.
+and `wt` is an optional weighting of the observations.
 The return object is a composite type (`LsqFitResult`), with some interesting values:
 
 * `fit.resid` : residuals = vector of residuals
@@ -188,6 +192,37 @@ additionally, it is possible to query the degrees of freedom with
 
 * `dof(fit)`
 * `coef(fit)`
+
+## Weights
+
+The values of `wt` are inverse variances, not standard deviations. A vector
+weights the squared residuals `∑ wtᵢ (model−y)ᵢ²`, so the optimal choice is
+`wtᵢ = 1/σᵢ²`. A matrix is the inverse covariance `Σ⁻¹` of the observations (a
+diagonal of `1/σᵢ²` is the vector case).
+
+The type of `wt` sets whether the residual scale `σ²` is known or estimated:
+
+| `wt` | scale `σ²` | `vcov(fit)` |
+|:-----|:-----------|:------------|
+| omitted | estimated | `σ̂² (JᵀJ)⁻¹` |
+| `PrecisionWeights(1 ./ σ.^2)` | known | `(JᵀWJ)⁻¹` |
+| `PrecisionMatrix(inv(Σ))` | known | `(JᵀWJ)⁻¹` |
+| `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` |
+| `FrequencyWeights(counts)` | estimated, `nobs=∑w` | `σ̂² (JᵀWJ)⁻¹` |
+
+`AnalyticWeights` are relative inverse-variance weights and do not depend on the
+overall scale of the weights, matching MATLAB `nlinfit`, Origin and LabPlot.
+`PrecisionWeights` are the exact inverse variances and `PrecisionMatrix` the exact
+inverse covariance, with the scale known; both use the normal critical value for
+confidence intervals. `vcov(fit)` is the parameter covariance and `stderror(fit)`
+its square-rooted diagonal. The "Weights" page of the manual has the derivation
+and a coverage check.
+
+!!! warning "Deprecated"
+    Passing a bare inverse-variance `Vector` or inverse-covariance `Matrix` is
+    deprecated. Use `PrecisionWeights(1 ./ σ.^2)` / `PrecisionMatrix(inv(Σ))` for
+    the same known-variance covariance (with a calibrated normal interval), or
+    `AnalyticWeights` to estimate the scale.
 
 ## Example
 ```julia
@@ -263,6 +298,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -287,6 +323,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
@@ -309,6 +346,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
 
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
@@ -333,6 +371,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
 
     u = cholesky(wt).U
 
@@ -341,23 +380,93 @@ function curve_fit(
     lmfit(f, g, p0, wt; kwargs...)
 end
 
-function StatsAPI.vcov(fit::LsqFitResult)
-    # computes covariance matrix of fit parameters
+"""
+    PrecisionWeights(vs)
 
-    # Both branches use the QR decomposition of the Jacobian, which is
-    # numerically more stable than forming and inverting J'J directly
-    # (note inv(J'J) == inv(R'R) == Rinv * Rinv').
+Weights whose values are the exact, known inverse variances `1 ./ σ.^2` of the
+observations. The residual scale is treated as known rather than estimated, so
+`vcov` is `(JᵀWJ)⁻¹` with no mean-squared-error factor and confidence intervals
+use the normal (asymptotic) critical value.
+
+This is the typed equivalent of passing a bare inverse-variance vector. Use
+`AnalyticWeights` instead when the weights are only relative precisions and the
+scale should be estimated.
+"""
+struct PrecisionWeights{S<:Real,T<:Real,V<:AbstractVector{T}} <: AbstractWeights{S,T,V}
+    values::V
+    sum::S
+end
+function PrecisionWeights(vs::AbstractVector{<:Real})
+    s = sum(vs)
+    return PrecisionWeights{typeof(s),eltype(vs),typeof(vs)}(vs, s)
+end
+
+"""
+    PrecisionMatrix(m)
+
+The exact, known **precision matrix** (inverse covariance) `inv(Σ)` of correlated
+observations. This is the matrix counterpart of [`PrecisionWeights`](@ref): the
+residual scale is treated as known, so `vcov` is `(JᵀWJ)⁻¹` with no
+mean-squared-error factor and confidence intervals use the normal critical value.
+
+!!! note
+    The argument is the precision matrix `inv(Σ)`, not the covariance `Σ`.
+"""
+struct PrecisionMatrix{T,M<:AbstractMatrix{T}} <: AbstractMatrix{T}
+    values::M
+end
+Base.size(pm::PrecisionMatrix) = size(pm.values)
+Base.getindex(pm::PrecisionMatrix, i::Int, j::Int) = pm.values[i, j]
+
+# Bare (untyped) vector/matrix weights are deprecated in favour of the typed
+# weight forms, which make the variance assumption explicit and use the matching
+# confidence interval. The typed weights subtype `AbstractVector`/`AbstractMatrix`,
+# so they reach the same `curve_fit` methods; these dispatches keep them silent
+# and warn only for a plain vector or matrix.
+_maybe_depwarn_bare_weights(::AbstractWeights) = nothing
+_maybe_depwarn_bare_weights(::PrecisionMatrix) = nothing
+function _maybe_depwarn_bare_weights(::AbstractVector)
+    Base.depwarn("Passing weights as a bare `Vector` is deprecated. Wrap the inverse variances `1 ./ σ.^2` in `PrecisionWeights` to keep the known-variance covariance (now with the calibrated normal confidence interval instead of Student-t), or in `AnalyticWeights` to estimate the scale.", :curve_fit)
+    return nothing
+end
+function _maybe_depwarn_bare_weights(::AbstractMatrix)
+    Base.depwarn("Passing weights as a bare `Matrix` is deprecated. Wrap the inverse covariance `inv(Σ)` in `PrecisionMatrix` instead (this also switches the confidence interval from Student-t to the calibrated normal quantile).", :curve_fit)
+    return nothing
+end
+
+# Whether the residual scale σ² is estimated from the fit and multiplied into the
+# covariance, or assumed known because the weights are the exact inverse
+# (co)variance. Unweighted, AnalyticWeights and FrequencyWeights estimate it; a
+# bare vector or matrix, PrecisionWeights or PrecisionMatrix, takes it as known.
+_estimates_scale(wt::AbstractVector) = isempty(wt)
+_estimates_scale(wt::AbstractMatrix) = false
+_estimates_scale(wt::AnalyticWeights) = true
+_estimates_scale(wt::FrequencyWeights) = true
+_estimates_scale(wt::PrecisionWeights) = false
+# ProbabilityWeights need a survey/sandwich variance and Weights has no bias
+# correction in StatsBase, so error instead of returning a mismatched covariance.
+function _estimates_scale(wt::Union{ProbabilityWeights,Weights})
+    throw(
+        ArgumentError(
+            "Covariance estimation is not defined for `$(nameof(typeof(wt)))`. " *
+            "Use `AnalyticWeights` (relative inverse-variance weights), " *
+            "`FrequencyWeights` (integer counts), a bare vector of exact inverse " *
+            "variances `1 ./ σ.^2`, or an inverse-covariance matrix `inv(Σ)`.",
+        ),
+    )
+end
+
+function StatsAPI.vcov(fit::LsqFitResult)
+    # Covariance from the QR decomposition of the (weight-folded) Jacobian, which
+    # is more stable than inverting JᵀJ directly (inv(JᵀJ) == Rinv * Rinv'). The
+    # weights are folded into J, so JᵀJ already equals Jrawᵀ W Jraw.
     J = fit.jacobian
     Q, R = qr(J)
     Rinv = inv(R)
     covar = Rinv * Rinv'
 
-    # In the weighted case the weights are folded into the residuals and
-    # hence into J (so J'J == Jraw' * W * Jraw). They are treated as the
-    # known inverse (co)variance, the residual scale is fixed to one, and
-    # no further variance estimate is applied. In the unweighted case the
-    # residual variance is unknown and estimated by the mean squared error.
-    if isempty(fit.wt)
+    # Scale by the estimated residual variance unless the weights fix it.
+    if _estimates_scale(fit.wt)
         covar = covar * mse(fit)
     end
 
@@ -384,6 +493,15 @@ function StatsAPI.stderror(fit::LsqFitResult; rtol::Real = NaN, atol::Real = 0)
     return sqrt.(abs.(vars))
 end
 
+# Reference distribution for confidence intervals and margins of error. Untyped
+# inputs (bare vector, matrix) and the unweighted case keep Student-t for
+# backwards compatibility. Typed inputs use Student-t when the scale is estimated
+# and the normal quantile when it is known.
+_ci_dist(fit::LsqFitResult) = _ci_dist(fit.wt, dof(fit))
+_ci_dist(wt, dof) = TDist(dof)
+_ci_dist(wt::AbstractWeights, dof) = _estimates_scale(wt) ? TDist(dof) : Normal()
+_ci_dist(wt::PrecisionMatrix, dof) = Normal()
+
 function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0)
     # computes margin of error at alpha significance level from
     #   fit   : a LsqFitResult from a curve_fit()
@@ -391,9 +509,9 @@ function margin_error(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::R
     #   atol  : absolute tolerance for approximate comparisson to 0.0 in negativity check
     #   rtol  : relative tolerance for approximate comparisson to 0.0 in negativity check
     std_errors = stderror(fit; rtol = rtol, atol = atol)
-    dist = TDist(dof(fit))
+    dist = _ci_dist(fit)
     critical_values = eltype(coef(fit))(quantile(dist, Float64(1 - alpha / 2)))
-    # scale standard errors by quantile of the student-t distribution (critical values)
+    # scale standard errors by the quantile of the reference distribution
     return std_errors * critical_values
 end
 

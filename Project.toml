@@ -1,6 +1,6 @@
 name = "LsqFit"
 uuid = "2fda8390-95c7-5789-9bda-21331edee243"
-version = "0.16.0"
+version = "0.17.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -10,6 +10,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NLSolversBase = "d41bc354-129a-5804-8e4c-c37616107c6c"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 StatsAPI = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 ADTypes = "1"
@@ -22,6 +23,7 @@ NLSolversBase = "8"
 Printf = "1"
 StableRNGs = "1"
 StatsAPI = "1"
+StatsBase = "0.33, 0.34"
 Test = "1"
 julia = "1.10"
 
