@@ -58,13 +58,13 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         yvars = T.(1e-6 * rand(rng, length(xdata)))
         ydata = T.(model(xdata, [1.0, 2.0]) + sqrt.(yvars) .* randn(rng, length(xdata)))
 
-        fit = curve_fit(model, xdata, ydata, 1 ./ yvars, T.([0.5, 0.5]))
+        fit = curve_fit(model, xdata, ydata, PrecisionWeights(1 ./ yvars), T.([0.5, 0.5]))
 
         @test norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
 
         # test matrix valued weights ( #161 )
-        weights = LinearAlgebra.diagm(1 ./ yvars)
+        weights = PrecisionMatrix(LinearAlgebra.diagm(1 ./ yvars))
         fit_matrixweights = curve_fit(model, xdata, ydata, weights, T.([0.5, 0.5]))
         @test fit.param == fit_matrixweights.param
 
@@ -74,7 +74,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
         @test norm(errors - [0.017, 0.075]) < 0.1
 
         # test with user-supplied jacobian and weights
-        fit = curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0)
+        fit = curve_fit(model, jacobian_model, xdata, ydata, PrecisionWeights(1 ./ yvars), p0)
         println("norm(fit.param - [1.0, 2.0]) < 0.05 ? ", norm(fit.param - [1.0, 2.0]))
         @test norm(fit.param - [1.0, 2.0]) < 0.05
         @test fit.converged
@@ -84,7 +84,7 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
             model,
             xdata,
             ydata,
-            1 ./ yvars,
+            PrecisionWeights(1 ./ yvars),
             BigFloat.(p0);
             x_tol = T(1e-20),
             g_tol = T(1e-20),
@@ -95,14 +95,14 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
             jacobian_model,
             xdata,
             ydata,
-            1 ./ yvars,
+            PrecisionWeights(1 ./ yvars),
             BigFloat.(p0);
             x_tol = T(1e-20),
             g_tol = T(1e-20),
         )
         @test fit.converged
 
-        curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, [0.5, 0.5]; tau = 0.0001)
+        curve_fit(model, jacobian_model, xdata, ydata, PrecisionWeights(1 ./ yvars), [0.5, 0.5]; tau = 0.0001)
     end
 
 end
@@ -121,7 +121,7 @@ end
     p0 = [0.5, 0.5]
 
     wt = fill(1 / σ^2, length(xdata))
-    fit = curve_fit(model, xdata, ydata, wt, p0)
+    fit = curve_fit(model, xdata, ydata, PrecisionWeights(wt), p0)
 
     # QR-based covariance equals the algebraic inv(J'J); J already carries the
     # weights, so this is the known-inverse-variance covariance with no MSE.
@@ -130,13 +130,13 @@ end
     @test vcov(fit) ≉ inv(J' * J) * LsqFit.mse(fit)
 
     # Vector weights and the equivalent diagonal matrix weights agree.
-    fit_mat = curve_fit(model, xdata, ydata, LinearAlgebra.diagm(wt), p0)
+    fit_mat = curve_fit(model, xdata, ydata, PrecisionMatrix(LinearAlgebra.diagm(wt)), p0)
     @test vcov(fit) ≈ vcov(fit_mat)
 
     # Weights of one give the same parameter estimates as an unweighted fit,
     # but a different covariance: the unweighted case additionally estimates
     # the residual variance via the MSE (#255).
-    fit_ones = curve_fit(model, xdata, ydata, ones(length(xdata)), p0)
+    fit_ones = curve_fit(model, xdata, ydata, PrecisionWeights(ones(length(xdata))), p0)
     fit_unwt = curve_fit(model, xdata, ydata, p0)
     @test fit_ones.param ≈ fit_unwt.param
     @test vcov(fit_ones) ≈ vcov(fit_unwt) / LsqFit.mse(fit_unwt)

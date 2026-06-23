@@ -205,8 +205,6 @@ The type of `wt` sets whether the residual scale `σ²` is known or estimated:
 | `wt` | scale `σ²` | `vcov(fit)` |
 |:-----|:-----------|:------------|
 | omitted | estimated | `σ̂² (JᵀJ)⁻¹` |
-| `1 ./ σ.^2` (vector) | known | `(JᵀWJ)⁻¹` |
-| `inv(Σ)` (matrix) | known | `(JᵀWJ)⁻¹` |
 | `PrecisionWeights(1 ./ σ.^2)` | known | `(JᵀWJ)⁻¹` |
 | `PrecisionMatrix(inv(Σ))` | known | `(JᵀWJ)⁻¹` |
 | `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` |
@@ -214,13 +212,17 @@ The type of `wt` sets whether the residual scale `σ²` is known or estimated:
 
 `AnalyticWeights` are relative inverse-variance weights and do not depend on the
 overall scale of the weights, matching MATLAB `nlinfit`, Origin and LabPlot.
-`PrecisionWeights` (and a bare vector) are the exact inverse variances and
-`PrecisionMatrix` (and a bare matrix) the exact inverse covariance, with the
-scale known. The typed forms (`PrecisionWeights`, `PrecisionMatrix`) use the
-normal critical value for confidence intervals; the bare vector and matrix keep
-Student-t. `vcov(fit)` is the parameter covariance and `stderror(fit)` its
-square-rooted diagonal. The "Weights" page of the manual has the derivation and a
-coverage check.
+`PrecisionWeights` are the exact inverse variances and `PrecisionMatrix` the exact
+inverse covariance, with the scale known; both use the normal critical value for
+confidence intervals. `vcov(fit)` is the parameter covariance and `stderror(fit)`
+its square-rooted diagonal. The "Weights" page of the manual has the derivation
+and a coverage check.
+
+!!! warning "Deprecated"
+    Passing a bare inverse-variance `Vector` or inverse-covariance `Matrix` is
+    deprecated. Use `PrecisionWeights(1 ./ σ.^2)` / `PrecisionMatrix(inv(Σ))` for
+    the same known-variance covariance (with a calibrated normal interval), or
+    `AnalyticWeights` to estimate the scale.
 
 ## Example
 ```julia
@@ -296,6 +298,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -320,6 +323,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
@@ -342,6 +346,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
 
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
@@ -366,6 +371,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
+    _maybe_depwarn_bare_weights(wt)
 
     u = cholesky(wt).U
 
@@ -411,6 +417,22 @@ struct PrecisionMatrix{T,M<:AbstractMatrix{T}} <: AbstractMatrix{T}
 end
 Base.size(pm::PrecisionMatrix) = size(pm.values)
 Base.getindex(pm::PrecisionMatrix, i::Int, j::Int) = pm.values[i, j]
+
+# Bare (untyped) vector/matrix weights are deprecated in favour of the typed
+# weight forms, which make the variance assumption explicit and use the matching
+# confidence interval. The typed weights subtype `AbstractVector`/`AbstractMatrix`,
+# so they reach the same `curve_fit` methods; these dispatches keep them silent
+# and warn only for a plain vector or matrix.
+_maybe_depwarn_bare_weights(::AbstractWeights) = nothing
+_maybe_depwarn_bare_weights(::PrecisionMatrix) = nothing
+function _maybe_depwarn_bare_weights(::AbstractVector)
+    Base.depwarn("Passing weights as a bare `Vector` is deprecated. Wrap the inverse variances `1 ./ σ.^2` in `PrecisionWeights` to keep the known-variance covariance (now with the calibrated normal confidence interval instead of Student-t), or in `AnalyticWeights` to estimate the scale.", :curve_fit)
+    return nothing
+end
+function _maybe_depwarn_bare_weights(::AbstractMatrix)
+    Base.depwarn("Passing weights as a bare `Matrix` is deprecated. Wrap the inverse covariance `inv(Σ)` in `PrecisionMatrix` instead (this also switches the confidence interval from Student-t to the calibrated normal quantile).", :curve_fit)
+    return nothing
+end
 
 # Whether the residual scale σ² is estimated from the fit and multiplied into the
 # covariance, or assumed known because the weights are the exact inverse

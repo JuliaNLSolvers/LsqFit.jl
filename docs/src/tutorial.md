@@ -321,15 +321,19 @@ The covariance matrix is now:
 ```
 
 
-This is the case in which the error variances are known exactly. Pass them as a
-bare vector `1 ./ var(ε)`, or as the inverse covariance matrix `inv(cov_ε)` for
+This is the case in which the error variances are known exactly. Wrap them in
+`PrecisionWeights(1 ./ var(ε))`, or in `PrecisionMatrix(inv(cov_ε))` for
 correlated errors:
 
 ```Julia
-wt = inv(cov_ε)
+wt = PrecisionMatrix(inv(cov_ε))
 fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
+
+!!! warning "Deprecated"
+    Passing a bare `1 ./ var(ε)` vector or `inv(cov_ε)` matrix still works but is
+    deprecated; use `PrecisionWeights` / `PrecisionMatrix` instead.
 
 If the variances are known only up to a common factor,
 ``ε \sim N(0, σ^2 W^{-1})`` with unknown ``σ^2``, the covariance is
@@ -349,11 +353,12 @@ fit = curve_fit(m, tdata, ydata, AnalyticWeights(1 ./ var(ε)), p0)
 `AnalyticWeights` do not depend on the overall scale of the weights, so uniform
 weights reproduce the unweighted fit.
 
-A bare vector and `AnalyticWeights` are not the same: the bare vector takes the
-weights as exact inverse variances (no scale estimated), `AnalyticWeights` takes
-them as relative precisions and estimates the scale, and they give different
-standard errors. A vector of ones is not equivalent to an unweighted fit, but
-`AnalyticWeights(ones(n))` is. The [Weights](@ref) page covers this in detail.
+`PrecisionWeights` and `AnalyticWeights` are not the same: `PrecisionWeights` take
+the weights as exact inverse variances (no scale estimated), `AnalyticWeights` take
+them as relative precisions and estimate the scale, and they give different
+standard errors. `PrecisionWeights(ones(n))` is not equivalent to an unweighted
+fit, but `AnalyticWeights(ones(n))` is. The [Weights](@ref) page covers this in
+detail.
 
 !!! note
     If the weight matrix is not a diagonal matrix, General Least Squares will be performed.
@@ -367,10 +372,11 @@ Set the weight matrix as the inverse of the error covariance matrix (the optimal
 \mathbf{Cov}(\boldsymbol{γ}^*) ≈ [J'WJ]^{-1}J'W \Sigma W'J[J'W'J]^{-1} = [J'WJ]^{-1}
 ```
 
-Pass the matrix `inv(covar(ε))` as the weight parameter (`wt`) to the function `curve_fit()`:
+Pass the matrix `inv(covar(ε))`, wrapped in `PrecisionMatrix`, as the weight
+parameter (`wt`) to the function `curve_fit()`:
 
 ```Julia
-wt = 1 ./ yvar
+wt = PrecisionMatrix(inv(covar(ε)))
 fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
@@ -386,7 +392,7 @@ Unweighted fitting (OLS) will return the residuals we need, since the estimator 
 
 ```Julia
 fit_OLS = curve_fit(m, tdata, ydata, p0)
-wt = 1 ./ fit_OLS.resid
+wt = AnalyticWeights(1 ./ fit_OLS.resid)
 fit_WLS = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit_WLS)
 ```

@@ -122,13 +122,13 @@ using LsqFit, Test, StableRNGs
     ydata = model(xdata, [1.0, 2.0]) + sqrt.(yvars) .* randn(rng, length(xdata))
 
     #warm up
-    curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0; maxIter = 1)
+    curve_fit(model, jacobian_model, xdata, ydata, PrecisionWeights(1 ./ yvars), p0; maxIter = 1)
     curve_fit(
         model,
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         p0;
         maxIter = 1,
         avv! = manual_avv!,
@@ -140,7 +140,7 @@ using LsqFit, Test, StableRNGs
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         p0;
         maxIter = 1,
         avv! = auto_avv!,
@@ -152,7 +152,7 @@ using LsqFit, Test, StableRNGs
 
     println("\t Non-inplace")
     fit_wt =
-        @time curve_fit(model, jacobian_model, xdata, ydata, 1 ./ yvars, p0; maxIter = 100)
+        @time curve_fit(model, jacobian_model, xdata, ydata, PrecisionWeights(1 ./ yvars), p0; maxIter = 100)
     @test fit_wt.converged
 
 
@@ -162,7 +162,7 @@ using LsqFit, Test, StableRNGs
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         p0;
         maxIter = 100,
         avv! = manual_avv!,
@@ -178,7 +178,7 @@ using LsqFit, Test, StableRNGs
         jacobian_model,
         xdata,
         ydata,
-        1 ./ yvars,
+        PrecisionWeights(1 ./ yvars),
         p0;
         maxIter = 100,
         avv! = auto_avv!,
