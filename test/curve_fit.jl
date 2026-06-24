@@ -5,6 +5,14 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
     @test_throws ErrorException(
         "The independent variable (`x`) contains `missing` values and a fit cannot be performed",
     ) LsqFit.check_data_health(tdata, tdata)
+    # missing in `y` and in the weights are rejected too
+    cleandata = collect(1:6)
+    @test_throws ErrorException(
+        "The dependent variable (`y`) contains `missing` values and a fit cannot be performed",
+    ) LsqFit.check_data_health(cleandata, tdata)
+    @test_throws ErrorException(
+        "Weight data contains `missing` values and a fit cannot be performed",
+    ) LsqFit.check_data_health(cleandata, cleandata, tdata)
     tdata = [rand(1:10, 5)..., Inf]
     @test_throws ErrorException(
         "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
@@ -166,26 +174,11 @@ end
         @test norm(fit.param - [1.0, 2.0]) < 0.05
     end
 
-    # legacy symbols: _autodiff_adtype emits a deprecation warning and maps correctly
-    @test_logs (:warn, r"deprecated") LsqFit._autodiff_adtype(:finite)
-    @test LsqFit._autodiff_adtype(:finite) == AutoFiniteDiff(fdjtype = Val(:central))
-    @test LsqFit._autodiff_adtype(:central) == AutoFiniteDiff(fdjtype = Val(:central))
-    @test LsqFit._autodiff_adtype(:finiteforward) ==
-          AutoFiniteDiff(fdjtype = Val(:forward))
-    @test LsqFit._autodiff_adtype(:finitecomplex) ==
-          AutoFiniteDiff(fdjtype = Val(:complex))
-    @test LsqFit._autodiff_adtype(:forward) == AutoForwardDiff()
-    @test LsqFit._autodiff_adtype(:forwarddiff) == AutoForwardDiff()
-
-    # legacy symbols still produce a correct fit end-to-end
-    for sym in (:finite, :central, :finiteforward, :finitecomplex, :forward, :forwarddiff)
-        fit = curve_fit(model, xdata, ydata, p0; autodiff = sym)
-        @test fit.converged
-        @test norm(fit.param - [1.0, 2.0]) < 0.1
+    # Symbol-based autodiff was removed in 1.0; only ADTypes backends are accepted.
+    @test !isdefined(LsqFit, :_autodiff_adtype)
+    for sym in (:finite, :central, :forward, :forwarddiff)
+        @test_throws Exception curve_fit(model, xdata, ydata, p0; autodiff = sym)
     end
-
-    # invalid symbol throws ArgumentError
-    @test_throws ArgumentError LsqFit._autodiff_adtype(:bad_symbol)
 
     # concretely-typed model with AutoForwardDiff gives a friendly, actionable error
     model_typed(x::AbstractVector{Float64}, p::AbstractVector{Float64}) =
@@ -200,6 +193,17 @@ end
     @test occursin("AutoForwardDiff", err.msg)
     @test occursin("AutoFiniteDiff", err.msg)
     @test occursin("AbstractVector{<:Real}", err.msg)
+end
+
+@testset "non-Dual errors from the optimizer are rethrown" begin
+    # A user-supplied Jacobian that throws something other than a Dual-related
+    # MethodError must propagate unchanged (not be reinterpreted as an autodiff
+    # incompatibility).
+    model(x, p) = p[1] .* exp.(-x .* p[2])
+    x = collect(range(0, 10, length = 20))
+    y = model(x, [1.0, 2.0])
+    badjac(x, p) = throw(ArgumentError("boom in jacobian"))
+    @test_throws ArgumentError("boom in jacobian") curve_fit(model, badjac, x, y, [0.5, 0.5])
 end
 
 @testset "#167" begin

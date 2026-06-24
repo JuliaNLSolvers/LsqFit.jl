@@ -79,12 +79,11 @@ inverse variances in every case.
 | `AnalyticWeights(1 ./ σ.^2)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `n` |
 | `FrequencyWeights(counts)` | estimated | `σ̂² (JᵀWJ)⁻¹` | `∑w` |
 
-!!! warning "Deprecated: bare vector and matrix weights"
-    Passing a bare `1 ./ σ.^2` vector or `inv(Σ)` matrix is deprecated and emits a
-    warning. Wrap them in [`PrecisionWeights`](@ref) / [`PrecisionMatrix`](@ref)
-    for the same known-variance covariance (with the calibrated normal interval),
-    or in `AnalyticWeights` to estimate the scale. The bare forms previously kept a
-    Student-t interval purely for backwards compatibility.
+!!! warning "Removed: bare vector and matrix weights"
+    Passing a bare `1 ./ σ.^2` vector or `inv(Σ)` matrix throws an `ArgumentError`
+    (deprecated in 0.16, removed in 1.0). Wrap them in [`PrecisionWeights`](@ref) /
+    [`PrecisionMatrix`](@ref) for the known-variance covariance (with the calibrated
+    normal interval), or in `AnalyticWeights` to estimate the scale.
 
 `AnalyticWeights`, `FrequencyWeights` are re-exported from
 [StatsBase](https://juliastats.org/StatsBase.jl/stable/weights/) and keep their
@@ -93,17 +92,17 @@ StatsBase meaning; `PrecisionWeights` and `PrecisionMatrix` are defined by LsqFi
 * `PrecisionWeights` are the exact, known inverse variances (independent errors)
   and `PrecisionMatrix` the exact, known precision matrix `inv(Σ)` (correlated
   errors). The scale is known, so `vcov` has no MSE factor and the confidence
-  interval uses the normal critical value. They are the typed forms of a bare
-  vector and a bare matrix.
+  interval uses the normal critical value. They are the required forms for
+  known-variance weighting (a bare vector/matrix is no longer accepted).
 * `AnalyticWeights` are reliability or inverse-variance weights. They give a
   relative importance, so the common scale is estimated and the result does not
   depend on the overall magnitude of the weights. This is the convention used by
   MATLAB `nlinfit`, Origin and LabPlot.
 * `FrequencyWeights` are integer counts: `wᵢ` means observation `i` was seen `wᵢ`
   times, so `nobs = ∑w`.
-* A bare vector or matrix (deprecated) is taken as the exact inverse (co)variance,
-  like `PrecisionWeights`/`PrecisionMatrix`, but keeps the Student-t interval for
-  backwards compatibility. Prefer the typed forms.
+A bare vector or matrix is no longer accepted: it was the exact inverse
+(co)variance with a Student-t interval, kept for backwards compatibility, and is
+now an error. Use `PrecisionWeights`/`PrecisionMatrix` instead.
 
 StatsBase has no weight type for the known-variance case (all of its corrected
 weights estimate the scale), which is why `PrecisionWeights`/`PrecisionMatrix`
@@ -222,14 +221,12 @@ is the case that is actually wrong.
 `margin_error` and `confint` use Student-t for the unweighted case. Typed weights
 use Student-t when the scale is estimated (`AnalyticWeights`, `FrequencyWeights`)
 and the normal quantile when it is known (`PrecisionWeights`, `PrecisionMatrix`).
-A deprecated bare vector or matrix has the same covariance as `PrecisionWeights` /
-`PrecisionMatrix` but keeps the Student-t reference for backwards compatibility.
 
 ## Choosing weights
 
 * Known `σᵢ`, trusted as absolute: `PrecisionWeights(1 ./ σ.^2)`, or
-  `PrecisionMatrix(inv(Σ))` for correlated errors. (Passing a bare `1 ./ σ.^2`
-  vector or `inv(Σ)` matrix is deprecated.)
+  `PrecisionMatrix(inv(Σ))` for correlated errors. (A bare `1 ./ σ.^2` vector or
+  `inv(Σ)` matrix is no longer accepted.)
 * Only relative precisions known, or results that match MATLAB/Origin/LabPlot:
   `AnalyticWeights(1 ./ σ.^2)`.
 * Repeated or aggregated counts: `FrequencyWeights(counts)`.

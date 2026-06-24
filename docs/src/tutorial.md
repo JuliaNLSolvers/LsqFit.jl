@@ -331,9 +331,10 @@ fit = curve_fit(m, tdata, ydata, wt, p0)
 cov = vcov(fit)
 ```
 
-!!! warning "Deprecated"
-    Passing a bare `1 ./ var(ε)` vector or `inv(cov_ε)` matrix still works but is
-    deprecated; use `PrecisionWeights` / `PrecisionMatrix` instead.
+!!! warning "Removed"
+    Passing a bare `1 ./ var(ε)` vector or `inv(cov_ε)` matrix throws an
+    `ArgumentError` (deprecated in 0.16, removed in 1.0); use `PrecisionWeights` /
+    `PrecisionMatrix` instead.
 
 If the variances are known only up to a common factor,
 ``ε \sim N(0, σ^2 W^{-1})`` with unknown ``σ^2``, the covariance is

@@ -45,38 +45,26 @@ using LsqFit, Test, LinearAlgebra, StableRNGs
         @test stderror(fit_known) ≈ sqrt.(diag(vcov(fit_known)))
     end
 
-    @testset "bare vector/matrix weights are deprecated" begin
-        wid(f) = [hi - lo for (lo, hi) in confint(f; level = 0.95)]
+    # Analytic Jacobian of model(x, p) = p[1] * exp(p[2] * x).
+    jac(x, p) = hcat(exp.(p[2] .* x), p[1] .* x .* exp.(p[2] .* x))
 
-        # A bare vector warns and falls back to the known-variance covariance with
-        # a Student-t interval; PrecisionWeights gives the same covariance but the
-        # calibrated (tighter) normal interval.
-        fit_bare = @test_logs (:warn, r"deprecated") match_mode = :any curve_fit(
-            model,
-            x,
-            y,
-            wt,
-            p0,
-        )
-        @test coef(fit_bare) ≈ coef(fit_known) rtol = 1e-8
-        @test vcov(fit_bare) ≈ vcov(fit_known) rtol = 1e-8
-        @test stderror(fit_bare) ≈ stderror(fit_known) rtol = 1e-8
-        @test all(wid(fit_known) .< wid(fit_bare))   # PrecisionWeights normal < bare t
+    @testset "bare vector/matrix weights are rejected" begin
+        # Bare weights were removed in 1.0; they must be wrapped in a weight type.
+        # Cover all four weighted methods: vector/matrix × with/without a Jacobian.
+        W = LinearAlgebra.diagm(wt)
+        @test_throws ArgumentError curve_fit(model, x, y, wt, p0)
+        @test_throws ArgumentError curve_fit(model, x, y, W, p0)
+        @test_throws ArgumentError curve_fit(model, jac, x, y, wt, p0)
+        @test_throws ArgumentError curve_fit(model, jac, x, y, W, p0)
+    end
 
-        # Same story for a bare matrix vs PrecisionMatrix.
-        M = LinearAlgebra.diagm(wt)                         # diagonal precision matrix
-        fit_bare_mat = @test_logs (:warn, r"deprecated") match_mode = :any curve_fit(
-            model,
-            x,
-            y,
-            M,
-            p0,
-        )
-        fit_pm = curve_fit(model, x, y, PrecisionMatrix(M), p0)
-        @test coef(fit_pm) ≈ coef(fit_known) rtol = 1e-8
-        @test vcov(fit_pm) ≈ vcov(fit_known) rtol = 1e-8
-        @test vcov(fit_pm) ≈ vcov(fit_bare_mat) rtol = 1e-8
-        @test all(wid(fit_pm) .< wid(fit_bare_mat))
+    @testset "matrix weight with a Jacobian model" begin
+        # A diagonal PrecisionMatrix with a supplied Jacobian must agree with the
+        # vector PrecisionWeights fit (exercises the GLS + Jacobian code path).
+        W = PrecisionMatrix(LinearAlgebra.diagm(wt))
+        fit_mat_jac = curve_fit(model, jac, x, y, W, p0)
+        @test coef(fit_mat_jac) ≈ coef(fit_known) rtol = 1e-8
+        @test vcov(fit_mat_jac) ≈ vcov(fit_known) rtol = 1e-8
     end
 
     @testset "FrequencyWeights count observations" begin

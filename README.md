@@ -177,7 +177,7 @@ Existing Functionality
 * `jacobian`: (optional) function that returns the Jacobian matrix of `model`
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
-* `w`: (optional) weight applied to the residual; use `PrecisionWeights(1 ./ σ.^2)` (or `PrecisionMatrix(inv(Σ))` for correlated errors) when the variances are known, or `AnalyticWeights`/`FrequencyWeights` to estimate the scale. Passing a bare vector or matrix still works but is deprecated.
+* `w`: (optional) weight applied to the residual; use `PrecisionWeights(1 ./ σ.^2)` (or `PrecisionMatrix(inv(Σ))` for correlated errors) when the variances are known, or `AnalyticWeights`/`FrequencyWeights` to estimate the scale. Passing a bare vector or matrix is no longer accepted (removed in 1.0).
 * `p0`: initial guess of the model parameters
 * `kwargs`: tuning parameters for fitting, passed to `levenberg_marquardt`, such as `maxIter`, `show_trace` or `lower` and `upper` bounds
 * `fit`: composite type of results (`LsqFitResult`)
