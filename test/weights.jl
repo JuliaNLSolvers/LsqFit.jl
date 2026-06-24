@@ -47,8 +47,13 @@ using LsqFit, Test, LinearAlgebra, StableRNGs
 
     @testset "bare vector/matrix weights are rejected" begin
         # Bare weights were removed in 1.0; they must be wrapped in a weight type.
+        # Cover all four weighted methods: vector/matrix × with/without a Jacobian.
+        jac(x, p) = hcat(exp.(p[2] .* x), p[1] .* x .* exp.(p[2] .* x))
+        W = LinearAlgebra.diagm(wt)
         @test_throws ArgumentError curve_fit(model, x, y, wt, p0)
-        @test_throws ArgumentError curve_fit(model, x, y, LinearAlgebra.diagm(wt), p0)
+        @test_throws ArgumentError curve_fit(model, x, y, W, p0)
+        @test_throws ArgumentError curve_fit(model, jac, x, y, wt, p0)
+        @test_throws ArgumentError curve_fit(model, jac, x, y, W, p0)
     end
 
     @testset "FrequencyWeights count observations" begin
