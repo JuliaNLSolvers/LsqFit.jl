@@ -45,38 +45,10 @@ using LsqFit, Test, LinearAlgebra, StableRNGs
         @test stderror(fit_known) ≈ sqrt.(diag(vcov(fit_known)))
     end
 
-    @testset "bare vector/matrix weights are deprecated" begin
-        wid(f) = [hi - lo for (lo, hi) in confint(f; level = 0.95)]
-
-        # A bare vector warns and falls back to the known-variance covariance with
-        # a Student-t interval; PrecisionWeights gives the same covariance but the
-        # calibrated (tighter) normal interval.
-        fit_bare = @test_logs (:warn, r"deprecated") match_mode = :any curve_fit(
-            model,
-            x,
-            y,
-            wt,
-            p0,
-        )
-        @test coef(fit_bare) ≈ coef(fit_known) rtol = 1e-8
-        @test vcov(fit_bare) ≈ vcov(fit_known) rtol = 1e-8
-        @test stderror(fit_bare) ≈ stderror(fit_known) rtol = 1e-8
-        @test all(wid(fit_known) .< wid(fit_bare))   # PrecisionWeights normal < bare t
-
-        # Same story for a bare matrix vs PrecisionMatrix.
-        M = LinearAlgebra.diagm(wt)                         # diagonal precision matrix
-        fit_bare_mat = @test_logs (:warn, r"deprecated") match_mode = :any curve_fit(
-            model,
-            x,
-            y,
-            M,
-            p0,
-        )
-        fit_pm = curve_fit(model, x, y, PrecisionMatrix(M), p0)
-        @test coef(fit_pm) ≈ coef(fit_known) rtol = 1e-8
-        @test vcov(fit_pm) ≈ vcov(fit_known) rtol = 1e-8
-        @test vcov(fit_pm) ≈ vcov(fit_bare_mat) rtol = 1e-8
-        @test all(wid(fit_pm) .< wid(fit_bare_mat))
+    @testset "bare vector/matrix weights are rejected" begin
+        # Bare weights were removed in 1.0; they must be wrapped in a weight type.
+        @test_throws ArgumentError curve_fit(model, x, y, wt, p0)
+        @test_throws ArgumentError curve_fit(model, x, y, LinearAlgebra.diagm(wt), p0)
     end
 
     @testset "FrequencyWeights count observations" begin

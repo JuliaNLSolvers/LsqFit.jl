@@ -52,34 +52,6 @@ function check_data_health(xdata, ydata, wt = [])
 
 end
 
-# Convert legacy symbol-based autodiff to AbstractADType for NLSolversBase v8 compatibility.
-# Symbols were accepted in v7 but are no longer valid in v8.
-function _autodiff_adtype(autodiff::AbstractADType)
-    autodiff
-end
-function _autodiff_adtype(autodiff::Symbol)
-    Base.depwarn(
-        "Passing `autodiff` as a Symbol (e.g. `$(repr(autodiff))`) is deprecated. " *
-        "Use an `ADTypes` backend such as `AutoForwardDiff()` or `AutoFiniteDiff(fdjtype = Val(:central))` instead.",
-        :curve_fit,
-    )
-    if autodiff in (:finite, :central)
-        return AutoFiniteDiff(fdjtype = Val(:central))
-    elseif autodiff == :finiteforward
-        return AutoFiniteDiff(fdjtype = Val(:forward))
-    elseif autodiff == :finitecomplex
-        return AutoFiniteDiff(fdjtype = Val(:complex))
-    elseif autodiff in (:forward, :forwarddiff)
-        return AutoForwardDiff()
-    else
-        throw(
-            ArgumentError(
-                "Unsupported autodiff symbol: $(repr(autodiff)). Use `AutoFiniteDiff()` or `AutoForwardDiff()`.",
-            ),
-        )
-    end
-end
-
 # provide a method for those who have their own Jacobian function
 function lmfit(f, g, p0::AbstractArray, wt::AbstractArray; kwargs...)
     r = f(p0)
@@ -108,7 +80,7 @@ function lmfit(
         p0,
         copy(r);
         inplace = true,
-        autodiff = _autodiff_adtype(autodiff),
+        autodiff = autodiff,
     )
     lmfit(R, p0, wt; kwargs...)
 end
@@ -141,7 +113,7 @@ function lmfit(
         p0,
         copy(r);
         inplace = false,
-        autodiff = _autodiff_adtype(autodiff),
+        autodiff = autodiff,
     )
     lmfit(R, p0, wt; kwargs...)
 end
@@ -218,11 +190,12 @@ confidence intervals. `vcov(fit)` is the parameter covariance and `stderror(fit)
 its square-rooted diagonal. The "Weights" page of the manual has the derivation
 and a coverage check.
 
-!!! warning "Deprecated"
-    Passing a bare inverse-variance `Vector` or inverse-covariance `Matrix` is
-    deprecated. Use `PrecisionWeights(1 ./ σ.^2)` / `PrecisionMatrix(inv(Σ))` for
-    the same known-variance covariance (with a calibrated normal interval), or
-    `AnalyticWeights` to estimate the scale.
+!!! note
+    `wt` must be one of the weight types above. Passing a bare inverse-variance
+    `Vector` or inverse-covariance `Matrix` is an error (deprecated in 0.16,
+    removed in 1.0); wrap it in `PrecisionWeights(1 ./ σ.^2)` /
+    `PrecisionMatrix(inv(Σ))` for a known variance, or `AnalyticWeights` to
+    estimate the scale.
 
 ## Example
 ```julia
@@ -298,7 +271,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
-    _maybe_depwarn_bare_weights(wt)
+    _assert_typed_weights(wt)
     # construct a weighted cost function, with a vector weight for each ydata
     # for example, this might be wt = 1/sigma where sigma is some error term
     u = sqrt.(wt) # to be consistant with the matrix form
@@ -323,7 +296,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
-    _maybe_depwarn_bare_weights(wt)
+    _assert_typed_weights(wt)
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
@@ -346,7 +319,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
-    _maybe_depwarn_bare_weights(wt)
+    _assert_typed_weights(wt)
 
     # as before, construct a weighted cost function with where this
     # method uses a matrix weight.
@@ -371,7 +344,7 @@ function curve_fit(
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
-    _maybe_depwarn_bare_weights(wt)
+    _assert_typed_weights(wt)
 
     u = cholesky(wt).U
 
@@ -418,21 +391,15 @@ end
 Base.size(pm::PrecisionMatrix) = size(pm.values)
 Base.getindex(pm::PrecisionMatrix, i::Int, j::Int) = pm.values[i, j]
 
-# Bare (untyped) vector/matrix weights are deprecated in favour of the typed
-# weight forms, which make the variance assumption explicit and use the matching
-# confidence interval. The typed weights subtype `AbstractVector`/`AbstractMatrix`,
-# so they reach the same `curve_fit` methods; these dispatches keep them silent
-# and warn only for a plain vector or matrix.
-_maybe_depwarn_bare_weights(::AbstractWeights) = nothing
-_maybe_depwarn_bare_weights(::PrecisionMatrix) = nothing
-function _maybe_depwarn_bare_weights(::AbstractVector)
-    Base.depwarn("Passing weights as a bare `Vector` is deprecated. Wrap the inverse variances `1 ./ σ.^2` in `PrecisionWeights` to keep the known-variance covariance (now with the calibrated normal confidence interval instead of Student-t), or in `AnalyticWeights` to estimate the scale.", :curve_fit)
-    return nothing
-end
-function _maybe_depwarn_bare_weights(::AbstractMatrix)
-    Base.depwarn("Passing weights as a bare `Matrix` is deprecated. Wrap the inverse covariance `inv(Σ)` in `PrecisionMatrix` instead (this also switches the confidence interval from Student-t to the calibrated normal quantile).", :curve_fit)
-    return nothing
-end
+# Weights must carry their statistical meaning in their type: PrecisionWeights /
+# PrecisionMatrix for a known variance, AnalyticWeights / FrequencyWeights for an
+# estimated scale. The typed weights subtype `AbstractVector`/`AbstractMatrix`, so
+# they reach the same `curve_fit` methods; these dispatches pass them through and
+# reject a plain vector or matrix (which was deprecated in 0.16 and removed in 1.0).
+_assert_typed_weights(::AbstractWeights) = nothing
+_assert_typed_weights(::PrecisionMatrix) = nothing
+_assert_typed_weights(::AbstractVector) = throw(ArgumentError("Bare `Vector` weights are no longer supported. Wrap the inverse variances `1 ./ σ.^2` in `PrecisionWeights` (known variance) or `AnalyticWeights` (estimated scale)."))
+_assert_typed_weights(::AbstractMatrix) = throw(ArgumentError("Bare `Matrix` weights are no longer supported. Wrap the inverse covariance `inv(Σ)` in `PrecisionMatrix`."))
 
 # Whether the residual scale σ² is estimated from the fit and multiplied into the
 # covariance, or assumed known because the weights are the exact inverse
@@ -525,19 +492,3 @@ function StatsAPI.confint(fit::LsqFitResult; level = 0.95, rtol::Real = NaN, ato
     margin_of_errors = margin_error(fit, 1 - level; rtol = rtol, atol = atol)
     return collect(zip(coef(fit) - margin_of_errors, coef(fit) + margin_of_errors))
 end
-
-@deprecate(
-    confidence_interval(fit::LsqFitResult, alpha = 0.05; rtol::Real = NaN, atol::Real = 0),
-    confint(fit; level = (1 - alpha), rtol = rtol, atol = atol)
-)
-
-@deprecate estimate_covar(fit::LsqFitResult) vcov(fit)
-
-@deprecate standard_errors(args...; kwargs...) stderror(args...; kwargs...)
-
-@deprecate estimate_errors(
-    fit::LsqFitResult,
-    confidence = 0.95;
-    rtol::Real = NaN,
-    atol::Real = 0,
-) margin_error(fit, 1 - confidence; rtol = rtol, atol = atol)

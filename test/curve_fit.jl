@@ -166,26 +166,11 @@ end
         @test norm(fit.param - [1.0, 2.0]) < 0.05
     end
 
-    # legacy symbols: _autodiff_adtype emits a deprecation warning and maps correctly
-    @test_logs (:warn, r"deprecated") LsqFit._autodiff_adtype(:finite)
-    @test LsqFit._autodiff_adtype(:finite) == AutoFiniteDiff(fdjtype = Val(:central))
-    @test LsqFit._autodiff_adtype(:central) == AutoFiniteDiff(fdjtype = Val(:central))
-    @test LsqFit._autodiff_adtype(:finiteforward) ==
-          AutoFiniteDiff(fdjtype = Val(:forward))
-    @test LsqFit._autodiff_adtype(:finitecomplex) ==
-          AutoFiniteDiff(fdjtype = Val(:complex))
-    @test LsqFit._autodiff_adtype(:forward) == AutoForwardDiff()
-    @test LsqFit._autodiff_adtype(:forwarddiff) == AutoForwardDiff()
-
-    # legacy symbols still produce a correct fit end-to-end
-    for sym in (:finite, :central, :finiteforward, :finitecomplex, :forward, :forwarddiff)
-        fit = curve_fit(model, xdata, ydata, p0; autodiff = sym)
-        @test fit.converged
-        @test norm(fit.param - [1.0, 2.0]) < 0.1
+    # Symbol-based autodiff was removed in 1.0; only ADTypes backends are accepted.
+    @test !isdefined(LsqFit, :_autodiff_adtype)
+    for sym in (:finite, :central, :forward, :forwarddiff)
+        @test_throws Exception curve_fit(model, xdata, ydata, p0; autodiff = sym)
     end
-
-    # invalid symbol throws ArgumentError
-    @test_throws ArgumentError LsqFit._autodiff_adtype(:bad_symbol)
 
     # concretely-typed model with AutoForwardDiff gives a friendly, actionable error
     model_typed(x::AbstractVector{Float64}, p::AbstractVector{Float64}) =
