@@ -5,6 +5,14 @@ using LsqFit, Test, StableRNGs, LinearAlgebra
     @test_throws ErrorException(
         "The independent variable (`x`) contains `missing` values and a fit cannot be performed",
     ) LsqFit.check_data_health(tdata, tdata)
+    # missing in `y` and in the weights are rejected too
+    cleandata = collect(1:6)
+    @test_throws ErrorException(
+        "The dependent variable (`y`) contains `missing` values and a fit cannot be performed",
+    ) LsqFit.check_data_health(cleandata, tdata)
+    @test_throws ErrorException(
+        "Weight data contains `missing` values and a fit cannot be performed",
+    ) LsqFit.check_data_health(cleandata, cleandata, tdata)
     tdata = [rand(1:10, 5)..., Inf]
     @test_throws ErrorException(
         "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
@@ -185,6 +193,17 @@ end
     @test occursin("AutoForwardDiff", err.msg)
     @test occursin("AutoFiniteDiff", err.msg)
     @test occursin("AbstractVector{<:Real}", err.msg)
+end
+
+@testset "non-Dual errors from the optimizer are rethrown" begin
+    # A user-supplied Jacobian that throws something other than a Dual-related
+    # MethodError must propagate unchanged (not be reinterpreted as an autodiff
+    # incompatibility).
+    model(x, p) = p[1] .* exp.(-x .* p[2])
+    x = collect(range(0, 10, length = 20))
+    y = model(x, [1.0, 2.0])
+    badjac(x, p) = throw(ArgumentError("boom in jacobian"))
+    @test_throws ArgumentError("boom in jacobian") curve_fit(model, badjac, x, y, [0.5, 0.5])
 end
 
 @testset "#167" begin
