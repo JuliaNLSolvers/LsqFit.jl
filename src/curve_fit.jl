@@ -149,6 +149,30 @@ Either:
     return LsqFitResult(p, value!(R, p), jacobian!(R, p), converged, results.trace, wt)
 end
 
+# With `scalar = true` the user passes a model `m(xᵢ, p)::Real` that takes a single
+# observation, instead of a vectorised `m(xdata, p)::AbstractVector`. We evaluate it
+# once per element of `xdata` to build the residual vector the cost function expects.
+_scalarized_model(model) = (xdata, p) -> map(x -> model(x, p), xdata)
+# A scalar Jacobian `jac(xᵢ, p)::AbstractVector` gives the gradient for one
+# observation; stack the per-observation rows into the `nobs × nparams` Jacobian.
+_scalarized_jacobian(jac) = (xdata, p) -> mapreduce(x -> permutedims(jac(x, p)), vcat, xdata)
+
+# In-place counterparts (`scalar = true, inplace = true`). The residual is filled
+# one observation at a time, and the in-place scalar Jacobian writes each gradient
+# straight into its row of `J` via a view, so no per-observation vector is allocated.
+function _scalar_residual!(F, model, xdata, p)
+    for i in eachindex(F)
+        F[i] = model(xdata[i], p)
+    end
+    return F
+end
+function _scalar_jacobian!(J, jac!, xdata, p)
+    for i in axes(J, 1)
+        jac!(view(J, i, :), xdata[i], p)
+    end
+    return J
+end
+
 """
     curve_fit(model, xdata, ydata, p0) -> fit
     curve_fit(model, xdata, ydata, wt, p0) -> fit
@@ -164,6 +188,32 @@ additionally, it is possible to query the degrees of freedom with
 
 * `dof(fit)`
 * `coef(fit)`
+
+## Scalar models
+
+By default `model(xdata, p)` is vectorised: it receives the whole `xdata` and
+returns one prediction per observation. Pass `scalar = true` to instead supply a
+model `model(xᵢ, p)` that takes a single observation and returns a single number;
+it is then evaluated once per element of `xdata`. An analytic Jacobian, if given,
+must likewise be scalar: `jacobian_model(xᵢ, p)` returns the gradient
+`∂model/∂p` (a length-`nparams` vector) for that observation.
+
+```julia
+fit = curve_fit((x, p) -> p[1] * exp(p[2] * x), xdata, ydata, p0; scalar = true)
+```
+
+With `scalar = true, inplace = true` the residual is filled one observation at a
+time and the scalar Jacobian writes each gradient straight into its row of `J`
+(no per-observation allocation): `jacobian_model(Jᵢ, xᵢ, p)` writes the length-
+`nparams` gradient into the row view `Jᵢ`.
+
+```julia
+function jac!(Jᵢ, x, p)        # fills row i of the Jacobian in place
+    Jᵢ[1] = exp(p[2] * x)
+    Jᵢ[2] = p[1] * x * exp(p[2] * x)
+end
+fit = curve_fit(model, jac!, xdata, ydata, p0; scalar = true, inplace = true)
+```
 
 ## Weights
 
@@ -222,6 +272,7 @@ function curve_fit(
     ydata::AbstractArray,
     p0::AbstractArray;
     inplace = false,
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -229,10 +280,14 @@ function curve_fit(
     T = eltype(ydata)
 
     if inplace
-        f! = (F, p) -> (model(F, xdata, p); @. F = F - ydata)
+        f! =
+            scalar ?
+            (F, p) -> (_scalar_residual!(F, model, xdata, p); @. F = F - ydata) :
+            (F, p) -> (model(F, xdata, p); @. F = F - ydata)
         lmfit(f!, p0, T[], ydata; kwargs...)
     else
-        f = (p) -> model(xdata, p) - ydata
+        m = scalar ? _scalarized_model(model) : model
+        f = (p) -> m(xdata, p) - ydata
         lmfit(f, p0, T[]; kwargs...)
     end
 end
@@ -244,6 +299,7 @@ function curve_fit(
     ydata::AbstractArray,
     p0::AbstractArray;
     inplace = false,
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata)
@@ -251,12 +307,19 @@ function curve_fit(
     T = eltype(ydata)
 
     if inplace
-        f! = (F, p) -> (model(F, xdata, p); @. F = F - ydata)
-        g! = (G, p) -> jacobian_model(G, xdata, p)
+        f! =
+            scalar ?
+            (F, p) -> (_scalar_residual!(F, model, xdata, p); @. F = F - ydata) :
+            (F, p) -> (model(F, xdata, p); @. F = F - ydata)
+        g! =
+            scalar ? (G, p) -> _scalar_jacobian!(G, jacobian_model, xdata, p) :
+            (G, p) -> jacobian_model(G, xdata, p)
         lmfit(f!, g!, p0, T[], copy(ydata); kwargs...)
     else
-        f = (p) -> model(xdata, p) - ydata
-        g = (p) -> jacobian_model(xdata, p)
+        m = scalar ? _scalarized_model(model) : model
+        jm = scalar ? _scalarized_jacobian(jacobian_model) : jacobian_model
+        f = (p) -> m(xdata, p) - ydata
+        g = (p) -> jm(xdata, p)
         lmfit(f, g, p0, T[]; kwargs...)
     end
 end
@@ -268,6 +331,7 @@ function curve_fit(
     wt::AbstractArray,
     p0::AbstractArray;
     inplace = false,
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -277,10 +341,14 @@ function curve_fit(
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
-        f! = (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
+        f! =
+            scalar ?
+            (F, p) -> (_scalar_residual!(F, model, xdata, p); @. F = u * (F - ydata)) :
+            (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
         lmfit(f!, p0, wt, ydata; kwargs...)
     else
-        f = (p) -> u .* (model(xdata, p) - ydata)
+        m = scalar ? _scalarized_model(model) : model
+        f = (p) -> u .* (m(xdata, p) - ydata)
         lmfit(f, p0, wt; kwargs...)
     end
 end
@@ -293,6 +361,7 @@ function curve_fit(
     wt::AbstractArray,
     p0::AbstractArray;
     inplace = false,
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -300,12 +369,20 @@ function curve_fit(
     u = sqrt.(wt) # to be consistant with the matrix form
 
     if inplace
-        f! = (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
-        g! = (G, p) -> (jacobian_model(G, xdata, p); @. G = u * G)
+        f! =
+            scalar ?
+            (F, p) -> (_scalar_residual!(F, model, xdata, p); @. F = u * (F - ydata)) :
+            (F, p) -> (model(F, xdata, p); @. F = u * (F - ydata))
+        g! =
+            scalar ?
+            (G, p) -> (_scalar_jacobian!(G, jacobian_model, xdata, p); @. G = u * G) :
+            (G, p) -> (jacobian_model(G, xdata, p); @. G = u * G)
         lmfit(f!, g!, p0, wt, ydata; kwargs...)
     else
-        f = (p) -> u .* (model(xdata, p) - ydata)
-        g = (p) -> u .* (jacobian_model(xdata, p))
+        m = scalar ? _scalarized_model(model) : model
+        jm = scalar ? _scalarized_jacobian(jacobian_model) : jacobian_model
+        f = (p) -> u .* (m(xdata, p) - ydata)
+        g = (p) -> u .* (jm(xdata, p))
         lmfit(f, g, p0, wt; kwargs...)
     end
 end
@@ -316,6 +393,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractMatrix,
     p0::AbstractArray;
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -330,7 +408,8 @@ function curve_fit(
     # This requires the matrix to be positive definite
     u = cholesky(wt).U
 
-    f(p) = u * (model(xdata, p) - ydata)
+    m = scalar ? _scalarized_model(model) : model
+    f(p) = u * (m(xdata, p) - ydata)
     lmfit(f, p0, wt; kwargs...)
 end
 
@@ -341,6 +420,7 @@ function curve_fit(
     ydata::AbstractArray,
     wt::AbstractMatrix,
     p0::AbstractArray;
+    scalar = false,
     kwargs...,
 )
     check_data_health(xdata, ydata, wt)
@@ -348,8 +428,10 @@ function curve_fit(
 
     u = cholesky(wt).U
 
-    f(p) = u * (model(xdata, p) - ydata)
-    g(p) = u * (jacobian_model(xdata, p))
+    m = scalar ? _scalarized_model(model) : model
+    jm = scalar ? _scalarized_jacobian(jacobian_model) : jacobian_model
+    f(p) = u * (m(xdata, p) - ydata)
+    g(p) = u * (jm(xdata, p))
     lmfit(f, g, p0, wt; kwargs...)
 end
 

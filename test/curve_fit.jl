@@ -217,3 +217,61 @@ end
     @test coef(fit)[1] ≈ 1
     @test coef(fit_bounded)[1] ≈ 1.22727271
 end
+
+@testset "scalar models (#145)" begin
+    # scalar model: one observation in, one number out
+    ms(x, p) = p[1] * exp(p[2] * x)
+    # vectorised equivalent
+    mv(x, p) = p[1] .* exp.(p[2] .* x)
+    # scalar Jacobian: gradient ∂model/∂p (length nparams) for one observation
+    js(x, p) = [exp(p[2] * x), p[1] * x * exp(p[2] * x)]
+    jv(x, p) = hcat(exp.(p[2] .* x), p[1] .* x .* exp.(p[2] .* x))
+    # in-place scalar Jacobian: writes the gradient into the row view Jᵢ
+    function js!(Jᵢ, x, p)
+        Jᵢ[1] = exp(p[2] * x)
+        Jᵢ[2] = p[1] * x * exp(p[2] * x)
+        return Jᵢ
+    end
+
+    x = Float64[1, 2, 4, 5, 8]
+    y = Float64[3, 4, 6, 11, 20]
+    p0 = [2.0, 0.3]
+    wt = 1 ./ (0.05 .* y) .^ 2
+    W = PrecisionMatrix(LinearAlgebra.diagm(wt))
+
+    ref = curve_fit(mv, x, y, p0)
+    ref_jac = curve_fit(mv, jv, x, y, p0)
+    ref_w = curve_fit(mv, x, y, PrecisionWeights(wt), p0)
+    ref_wmat = curve_fit(mv, x, y, W, p0)
+
+    @testset "match the vectorised fit" begin
+        @test coef(curve_fit(ms, x, y, p0; scalar = true)) ≈ coef(ref) rtol = 1e-10
+        @test coef(curve_fit(ms, js, x, y, p0; scalar = true)) ≈ coef(ref_jac) rtol = 1e-10
+        # the stacked scalar Jacobian equals the vectorised/autodiff Jacobian
+        @test curve_fit(ms, js, x, y, p0; scalar = true).jacobian ≈ ref_jac.jacobian rtol =
+            1e-8
+    end
+
+    @testset "compose with weights" begin
+        @test coef(curve_fit(ms, x, y, PrecisionWeights(wt), p0; scalar = true)) ≈
+              coef(ref_w) rtol = 1e-10
+        @test coef(curve_fit(ms, js, x, y, PrecisionWeights(wt), p0; scalar = true)) ≈
+              coef(ref_w) rtol = 1e-10
+        @test coef(curve_fit(ms, x, y, W, p0; scalar = true)) ≈ coef(ref_wmat) rtol = 1e-10
+        @test coef(curve_fit(ms, js, x, y, W, p0; scalar = true)) ≈ coef(ref_wmat) rtol =
+            1e-10
+    end
+
+    @testset "inplace scalar model and Jacobian" begin
+        # inplace residual fill, autodiff Jacobian
+        @test coef(curve_fit(ms, x, y, p0; scalar = true, inplace = true)) ≈ coef(ref) rtol =
+            1e-6
+        # inplace residual + inplace row-view analytic Jacobian
+        fij = curve_fit(ms, js!, x, y, p0; scalar = true, inplace = true)
+        @test coef(fij) ≈ coef(ref) rtol = 1e-6
+        @test fij.jacobian ≈ ref_jac.jacobian rtol = 1e-6
+        # composes with vector weights (matrix weights have no inplace path)
+        @test coef(curve_fit(ms, js!, x, y, PrecisionWeights(wt), p0; scalar = true, inplace = true)) ≈
+              coef(ref_w) rtol = 1e-6
+    end
+end

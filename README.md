@@ -22,7 +22,12 @@ using LsqFit
 # across all rows.
 @. model(x, p) = p[1]*exp(-x*p[2])
 ```
-The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. We simulate some data and chose our "true" parameters.
+The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. Alternatively, pass `scalar=true` and write the model for a single observation (no vectorisation needed); it is then applied to each element of `x` for you:
+```julia
+model_scalar(x, p) = p[1]*exp(-x*p[2])
+fit = curve_fit(model_scalar, xdata, ydata, p0; scalar=true)
+```
+We simulate some data and chose our "true" parameters.
 ```julia
 # some example data
 # xdata: independent variables
