@@ -11,8 +11,11 @@ variables can therefore take a matrix with one row per observation, or a vector 
 tuples. The number of observations must equal `length(ydata)`.
 
 `Pointwise(f)(xdata, p)` returns the vector of predictions, so the wrapped model also
-predicts at new points. The wrapper fills the residual in place when `curve_fit` is
-called with `inplace = true`.
+predicts at new points.
+
+With `inplace = true` the wrapper fills the residual in place, and a
+[`PointwiseJacobian`](@ref) fills the Jacobian in place. `f` does not change. For large
+data sets this allocates far less and is usually faster.
 
 # Example
 ```julia

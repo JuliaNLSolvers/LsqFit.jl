@@ -110,6 +110,7 @@ fit = curve_fit(Pointwise(model_point), xdata, ydata, [0.5, 0.5])
 gradient_point(x, p) = (exp(-x*p[2]), -x*p[1]*exp(-x*p[2]))
 fit = curve_fit(Pointwise(model_point), PointwiseJacobian(gradient_point), xdata, ydata, [0.5, 0.5])
 ```
+A tuple gradient, as above, avoids allocating a vector for each observation. For large data sets, also pass `inplace = true`: the wrappers then fill the residual and the Jacobian in place, with no change to `model_point` or `gradient_point`.
 An observation is an element of a vector `xdata`, or a row of a matrix `xdata`. The rows of `xy` in the multivariate example are its observations, so the Gaussian there can be written for a single point:
 ```julia
 function twoD_Gaussian_point(xy, p)
