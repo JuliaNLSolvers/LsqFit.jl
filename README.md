@@ -22,7 +22,7 @@ using LsqFit
 # across all rows.
 @. model(x, p) = p[1]*exp(-x*p[2])
 ```
-The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. We simulate some data and chose our "true" parameters.
+The function applies the per observation function `p[1]*exp(-x[i]*p[2])` to the full dataset in `x`, with `i` denoting an observation row. We simulate some data and choose our "true" parameters.
 ```julia
 # some example data
 # xdata: independent variables
@@ -96,6 +96,33 @@ data = twoD_Gaussian(xy, p0)
 data_noisy = data + 0.2 * randn(size(data))
 
 fit = LsqFit.curve_fit(twoD_Gaussian, xy, data_noisy, p0)
+```
+
+Pointwise models
+----------------
+A model can also be written for a single observation and wrapped in `Pointwise`, which evaluates it once per observation. With `xdata` and `ydata` from the first example:
+```julia
+model_point(x, p) = p[1]*exp(-x*p[2])
+fit = curve_fit(Pointwise(model_point), xdata, ydata, [0.5, 0.5])
+```
+`Pointwise(model_point)(xnew, coef(fit))` then evaluates the fitted model at new points. An analytic Jacobian is written for a single observation too: `PointwiseJacobian` takes the gradient of the model with respect to `p`, as a number, a tuple or a vector.
+```julia
+gradient_point(x, p) = (exp(-x*p[2]), -x*p[1]*exp(-x*p[2]))
+fit = curve_fit(Pointwise(model_point), PointwiseJacobian(gradient_point), xdata, ydata, [0.5, 0.5])
+```
+A tuple gradient, as above, avoids allocating a vector for each observation. For large data sets, also pass `inplace = true`: the wrappers then fill the residual and the Jacobian in place, with no change to `model_point` or `gradient_point`.
+An observation is an element of a vector `xdata`, or a row of a matrix `xdata`. The rows of `xy` in the multivariate example are its observations, so the Gaussian there can be written for a single point:
+```julia
+function twoD_Gaussian_point(xy, p)
+    amplitude, xo, yo, sigma_x, sigma_y, theta, offset = p
+    a = (cos(theta)^2)/(2*sigma_x^2) + (sin(theta)^2)/(2*sigma_y^2)
+    b = -(sin(2*theta))/(4*sigma_x^2) + (sin(2*theta))/(4*sigma_y^2)
+    c = (sin(theta)^2)/(2*sigma_x^2) + (cos(theta)^2)/(2*sigma_y^2)
+    x, y = xy
+    return offset + amplitude*exp(-(a*(x - xo)^2 + 2*b*(x - xo)*(y - yo) + c*(y - yo)^2))
+end
+
+fit = curve_fit(Pointwise(twoD_Gaussian_point), xy, data_noisy, p0)
 ```
 
 Evaluating the Jacobian and using automatic differentiation
@@ -173,8 +200,8 @@ Existing Functionality
 
 `fit = curve_fit(model, [jacobian], x, y, [w,] p0; kwargs...)`:
 
-* `model`: function that takes two arguments (x, params)
-* `jacobian`: (optional) function that returns the Jacobian matrix of `model`
+* `model`: function that takes two arguments (x, params), or a single-observation model wrapped in `Pointwise`
+* `jacobian`: (optional) function that returns the Jacobian matrix of `model`, or a single-observation gradient wrapped in `PointwiseJacobian`
 * `x`: the independent variable
 * `y`: the dependent variable that constrains `model`
 * `w`: (optional) weight applied to the residual; use `PrecisionWeights(1 ./ σ.^2)` (or `PrecisionMatrix(inv(Σ))` for correlated errors) when the variances are known, or `AnalyticWeights`/`FrequencyWeights` to estimate the scale. Passing a bare vector or matrix is no longer accepted (removed in 1.0).

@@ -1,6 +1,8 @@
 module LsqFit
 
 export curve_fit,
+    Pointwise,
+    PointwiseJacobian,
     margin_error,
     make_hessian,
     Avv,
@@ -44,5 +46,6 @@ import Base.summary
 include("geodesic.jl")
 include("levenberg_marquardt.jl")
 include("curve_fit.jl")
+include("pointwise.jl")
 
 end

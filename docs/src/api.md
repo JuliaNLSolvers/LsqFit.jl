@@ -6,6 +6,13 @@ Pages   = ["curve_fit.jl"]
 Order   = [:function]
 ```
 
+## Pointwise models
+
+```@docs
+Pointwise
+PointwiseJacobian
+```
+
 ## Weight types
 
 ```@docs

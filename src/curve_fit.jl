@@ -20,8 +20,14 @@ StatsAPI.residuals(lfr::LsqFitResult) = lfr.resid
 mse(lfr::LsqFitResult) = rss(lfr) / dof(lfr)
 isconverged(lsr::LsqFitResult) = lsr.converged
 
+# An observation in `xdata` can be a tuple or a vector (see `Pointwise`), so the
+# checks on `xdata` look inside containers.
+_any_leaf(pred, x::Union{Number,Missing}) = pred(x)
+_any_leaf(pred, x::Union{AbstractArray,Tuple,NamedTuple}) = any(xᵢ -> _any_leaf(pred, xᵢ), x)
+_any_leaf(pred, x) = false
+
 function check_data_health(xdata, ydata, wt = [])
-    if any(ismissing, xdata)
+    if _any_leaf(ismissing, xdata)
         error(
             "The independent variable (`x`) contains `missing` values and a fit cannot be performed",
         )
@@ -34,7 +40,7 @@ function check_data_health(xdata, ydata, wt = [])
     if any(ismissing, wt)
         error("Weight data contains `missing` values and a fit cannot be performed")
     end
-    if any(!isfinite, xdata)
+    if _any_leaf(!isfinite, xdata)
         error(
             "The independent variable (`x`) contains non-finite (e.g. `Inf`, `NaN`) values and a fit cannot be performed",
         )
@@ -164,6 +170,17 @@ additionally, it is possible to query the degrees of freedom with
 
 * `dof(fit)`
 * `coef(fit)`
+
+## Pointwise models
+
+`model(xdata, p)` receives the whole `xdata` and returns one prediction per
+observation. A model written for a single observation, `m(xᵢ, p)`, can be passed as
+`Pointwise(m)`, and its gradient `g(xᵢ, p)` as `PointwiseJacobian(g)`. See
+[`Pointwise`](@ref) for what counts as an observation.
+
+```julia
+fit = curve_fit(Pointwise((x, p) -> p[1] * exp(-p[2] * x)), xdata, ydata, p0)
+```
 
 ## Weights
 
