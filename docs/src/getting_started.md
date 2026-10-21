@@ -73,4 +73,11 @@ julia> confidence_interval = confint(fit; level=0.9)
  (1.98537, 2.16162)
 ```
 
+The model above is vectorised: it takes all of `tdata` at once and broadcasts over it. A model can instead be written for a single observation and wrapped in [`Pointwise`](@ref), which evaluates it once per observation.
+
+```julia
+model_point(t, p) = p[1] * exp(-p[2] * t)
+fit = curve_fit(Pointwise(model_point), tdata, ydata, p0)
+```
+
 For more details of `LsqFit.jl`, check [Tutorial](./tutorial.md) and [API References](./api.md) section.

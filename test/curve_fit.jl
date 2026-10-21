@@ -218,60 +218,107 @@ end
     @test coef(fit_bounded)[1] ≈ 1.22727271
 end
 
-@testset "scalar models (#145)" begin
-    # scalar model: one observation in, one number out
-    ms(x, p) = p[1] * exp(p[2] * x)
-    # vectorised equivalent
+@testset "Pointwise models (#145)" begin
+    mp(x, p) = p[1] * exp(p[2] * x)
     mv(x, p) = p[1] .* exp.(p[2] .* x)
-    # scalar Jacobian: gradient ∂model/∂p (length nparams) for one observation
-    js(x, p) = [exp(p[2] * x), p[1] * x * exp(p[2] * x)]
+    mv!(F, x, p) = (@. F = p[1] * exp(p[2] * x))
+    gp(x, p) = [exp(p[2] * x), p[1] * x * exp(p[2] * x)]
     jv(x, p) = hcat(exp.(p[2] .* x), p[1] .* x .* exp.(p[2] .* x))
-    # in-place scalar Jacobian: writes the gradient into the row view Jᵢ
-    function js!(Jᵢ, x, p)
-        Jᵢ[1] = exp(p[2] * x)
-        Jᵢ[2] = p[1] * x * exp(p[2] * x)
-        return Jᵢ
-    end
+    jv!(J, x, p) = (J .= jv(x, p))
 
     x = Float64[1, 2, 4, 5, 8]
     y = Float64[3, 4, 6, 11, 20]
     p0 = [2.0, 0.3]
-    wt = 1 ./ (0.05 .* y) .^ 2
-    W = PrecisionMatrix(LinearAlgebra.diagm(wt))
-
-    ref = curve_fit(mv, x, y, p0)
-    ref_jac = curve_fit(mv, jv, x, y, p0)
-    ref_w = curve_fit(mv, x, y, PrecisionWeights(wt), p0)
-    ref_wmat = curve_fit(mv, x, y, W, p0)
+    w = 1 ./ (0.05 .* y) .^ 2
 
     @testset "match the vectorised fit" begin
-        @test coef(curve_fit(ms, x, y, p0; scalar = true)) ≈ coef(ref) rtol = 1e-10
-        @test coef(curve_fit(ms, js, x, y, p0; scalar = true)) ≈ coef(ref_jac) rtol = 1e-10
-        # the stacked scalar Jacobian equals the vectorised/autodiff Jacobian
-        @test curve_fit(ms, js, x, y, p0; scalar = true).jacobian ≈ ref_jac.jacobian rtol =
-            1e-8
+        for wt in ((), (PrecisionWeights(w),)), inplace in (false, true)
+            vm = inplace ? mv! : mv
+            vj = inplace ? jv! : jv
+            ref = curve_fit(vm, x, y, wt..., p0; inplace = inplace)
+            fit = curve_fit(Pointwise(mp), x, y, wt..., p0; inplace = inplace)
+            @test coef(fit) ≈ coef(ref) rtol = 1e-12
+            ref_jac = curve_fit(vm, vj, x, y, wt..., p0; inplace = inplace)
+            fit_jac = curve_fit(
+                Pointwise(mp),
+                PointwiseJacobian(gp),
+                x,
+                y,
+                wt...,
+                p0;
+                inplace = inplace,
+            )
+            @test coef(fit_jac) ≈ coef(ref_jac) rtol = 1e-12
+            @test fit_jac.jacobian ≈ ref_jac.jacobian rtol = 1e-12
+        end
+        W = PrecisionMatrix(LinearAlgebra.diagm(w))
+        @test coef(curve_fit(Pointwise(mp), x, y, W, p0)) ≈ coef(curve_fit(mv, x, y, W, p0)) rtol =
+            1e-12
+        @test coef(curve_fit(Pointwise(mp), PointwiseJacobian(gp), x, y, W, p0)) ≈
+              coef(curve_fit(mv, jv, x, y, W, p0)) rtol = 1e-12
+        # the analytic gradient agrees with the autodiff Jacobian at the solution
+        fit = curve_fit(Pointwise(mp), x, y, p0)
+        @test PointwiseJacobian(gp)(x, coef(fit)) ≈ fit.jacobian
+        @test Pointwise(mp)(x, coef(fit)) ≈ y + residuals(fit)
     end
 
-    @testset "compose with weights" begin
-        @test coef(curve_fit(ms, x, y, PrecisionWeights(wt), p0; scalar = true)) ≈
-              coef(ref_w) rtol = 1e-10
-        @test coef(curve_fit(ms, js, x, y, PrecisionWeights(wt), p0; scalar = true)) ≈
-              coef(ref_w) rtol = 1e-10
-        @test coef(curve_fit(ms, x, y, W, p0; scalar = true)) ≈ coef(ref_wmat) rtol = 1e-10
-        @test coef(curve_fit(ms, js, x, y, W, p0; scalar = true)) ≈ coef(ref_wmat) rtol =
-            1e-10
+    @testset "gradient forms" begin
+        p = [1.5, 0.2]
+        J = jv(x, p)
+        @test PointwiseJacobian(gp)(x, p) ≈ J
+        @test PointwiseJacobian((x, p) -> Tuple(gp(x, p)))(x, p) ≈ J
+        @test PointwiseJacobian((x, p) -> permutedims(gp(x, p)))(x, p) ≈ J
+        # one parameter: the gradient is a number
+        @test PointwiseJacobian((x, p) -> x * exp(p[1] * x))(x, [0.2]) ≈
+              reshape(x .* exp.(0.2 .* x), :, 1)
+        fit_tuple = curve_fit(
+            Pointwise(mp),
+            PointwiseJacobian((x, p) -> Tuple(gp(x, p))),
+            x,
+            y,
+            p0;
+            inplace = true,
+        )
+        @test coef(fit_tuple) ≈ coef(curve_fit(mv!, jv!, x, y, p0; inplace = true)) rtol =
+            1e-12
     end
 
-    @testset "inplace scalar model and Jacobian" begin
-        # inplace residual fill, autodiff Jacobian
-        @test coef(curve_fit(ms, x, y, p0; scalar = true, inplace = true)) ≈ coef(ref) rtol =
-            1e-6
-        # inplace residual + inplace row-view analytic Jacobian
-        fij = curve_fit(ms, js!, x, y, p0; scalar = true, inplace = true)
-        @test coef(fij) ≈ coef(ref) rtol = 1e-6
-        @test fij.jacobian ≈ ref_jac.jacobian rtol = 1e-6
-        # composes with vector weights (matrix weights have no inplace path)
-        @test coef(curve_fit(ms, js!, x, y, PrecisionWeights(wt), p0; scalar = true, inplace = true)) ≈
-              coef(ref_w) rtol = 1e-6
+    @testset "several independent variables" begin
+        X = [1.0 0.5; 2.0 1.0; 3.0 0.2; 4.0 2.0; 5.0 1.5; 6.0 0.7]
+        mv2(X, p) = p[1] .* exp.(p[2] .* X[:, 1] .+ p[3] .* X[:, 2])
+        mp2(xᵢ, p) = p[1] * exp(p[2] * xᵢ[1] + p[3] * xᵢ[2])
+        y2 = mv2(X, [1.0, 0.3, -0.5]) .+ [0.01, -0.02, 0.0, 0.03, -0.01, 0.02]
+        q0 = [0.5, 0.1, 0.1]
+        ref = curve_fit(mv2, X, y2, q0)
+        # a matrix has one observation per row; a vector holds one per element
+        for xdata in (X, Tuple.(eachrow(X)), collect.(eachrow(X))), inplace in (false, true)
+            fit = curve_fit(Pointwise(mp2), xdata, y2, q0; inplace = inplace)
+            @test coef(fit) ≈ coef(ref) rtol = 1e-12
+        end
+        @test_throws ErrorException LsqFit.check_data_health([(1.0, NaN), (2.0, 1.0)], y2)
+        @test_throws ErrorException LsqFit.check_data_health([[1.0, missing]], y2)
+    end
+
+    @testset "errors" begin
+        x_long = [x; 9.0]
+        @test_throws DimensionMismatch curve_fit(Pointwise(mp), x_long, y, p0)
+        @test_throws DimensionMismatch curve_fit(Pointwise(mp), x_long, y, p0; inplace = true)
+        @test_throws DimensionMismatch curve_fit(
+            Pointwise(mp),
+            PointwiseJacobian(gp),
+            x_long,
+            y,
+            p0;
+            inplace = true,
+        )
+        @test_throws DimensionMismatch curve_fit(
+            Pointwise(mp),
+            PointwiseJacobian((x, p) -> [1.0, 2.0, 3.0]),
+            x,
+            y,
+            p0,
+        )
+        @test_throws ArgumentError curve_fit(Pointwise((x, p) -> [mp(x, p)]), x, y, p0)
+        @test_throws ArgumentError curve_fit(Pointwise(mp), reshape(x, 1, 1, :), y, p0)
     end
 end
